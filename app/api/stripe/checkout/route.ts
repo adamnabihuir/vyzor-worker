@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
       metadata: { userId, plan },
     },
     metadata: { userId, plan },
-    success_url: `${baseUrl}/dashboard?checkout=success`,
-    cancel_url: `${baseUrl}/pricing`,
+    success_url: `${baseUrl}/checkout/success`,
+    cancel_url: `${baseUrl}/onboarding`,
     allow_promotion_codes: true,
   });
 
