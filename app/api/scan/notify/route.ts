@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   const resend = new Resend(apiKey);
 
   const { error: emailErr } = await resend.emails.send({
-    from: 'Vyzor <notifications@vyzor.io>',
+    from: 'Vyzor <onboarding@resend.dev>',
     to: toEmail,
     subject: `[Vyzor] ${statusLine}`,
     html: `
