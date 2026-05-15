@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No subscription found' }, { status: 400 });
   }
 
+  const stripe = getStripe();
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
