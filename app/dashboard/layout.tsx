@@ -6,22 +6,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { userId } = await auth();
   if (!userId) redirect('/auth/login');
 
-  // Check subscription status
   const client = await clerkClient();
   const user = await client.users.getUser(userId);
   const sub = user.publicMetadata?.subscription as { status?: string } | undefined;
   const activeStatuses = ['trialing', 'active'];
-
-  // Allow access with ?checkout=success (webhook may not have fired yet)
-  // The actual check will re-run on next navigation
   const hasAccess = sub?.status && activeStatuses.includes(sub.status);
 
-  if (!hasAccess) {
-    redirect('/onboarding');
-  }
+  if (!hasAccess) redirect('/onboarding');
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#f8fafc' }}>
+    <div className="min-h-screen flex" style={{ background: '#021a12' }}>
       <Sidebar />
       <main className="flex-1 ml-60 min-h-screen">
         {children}

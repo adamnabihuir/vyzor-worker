@@ -49,7 +49,7 @@ export default function HowItWorks() {
         {/* Steps */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           {STEPS.map((step, i) => (
-            <div key={i} className="card-dark rounded-2xl p-7 relative">
+            <div key={i} className="rounded-2xl p-7 relative" style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(255,255,255,0.13)', boxShadow: '0 4px 28px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)' }}>
               {/* Connector line */}
               {i < STEPS.length - 1 && (
                 <div className="hidden lg:block absolute top-10 -right-3 w-6 h-px z-10"
@@ -74,14 +74,14 @@ export default function HowItWorks() {
         </div>
 
         {/* Integration bar */}
-        <div className="card-dark rounded-2xl p-7 text-center">
+        <div className="rounded-2xl p-7 text-center" style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(255,255,255,0.13)', boxShadow: '0 4px 28px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)' }}>
           <p className="font-semibold mb-5 text-xs uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
             Integrates with your existing stack
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             {INTEGRATIONS.map((name) => (
               <span key={name} className="px-4 py-2 rounded-lg text-sm font-medium"
-                style={{ background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.12)', color: 'var(--text-sec)' }}>
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-sec)' }}>
                 {name}
               </span>
             ))}

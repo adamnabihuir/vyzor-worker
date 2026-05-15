@@ -76,7 +76,7 @@ export default function Features() {
         {/* Feature rows */}
         <div className="space-y-6">
           {FEATURES.map((feature, i) => (
-            <div key={i} className="card-dark rounded-2xl p-8 md:p-10 grid md:grid-cols-2 gap-10 items-center">
+            <div key={i} className="rounded-2xl p-8 md:p-10 grid md:grid-cols-2 gap-10 items-center" style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(255,255,255,0.13)', boxShadow: '0 4px 28px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)' }}>
               {/* Copy */}
               <div className={i % 2 === 1 ? 'md:order-2' : ''}>
                 <div className="flex items-center gap-3 mb-5">

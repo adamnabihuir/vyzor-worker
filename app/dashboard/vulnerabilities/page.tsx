@@ -3,12 +3,96 @@
 import { useState } from 'react';
 
 const ISSUES = [
-  { id: 1, title: 'Insecure TLS Ciphers', severity: 'Medium', occurrences: 3, target: 'www.uir.ac.ma', hygiene: true, cvss: 5.3, epss: 0.002 },
-  { id: 2, title: 'Insecure SSH Ciphers', severity: 'Medium', occurrences: 6, target: 'www.uir.ac.ma', hygiene: true, cvss: 5.3, epss: 0.001 },
-  { id: 3, title: 'Insecure SSH Integrity Settings', severity: 'Low', occurrences: 2, target: 'www.uir.ac.ma', hygiene: true, cvss: 3.7, epss: 0.001 },
-  { id: 4, title: 'Weak SSH Key Exchange Algorithms Supported', severity: 'Low', occurrences: 1, target: 'www.uir.ac.ma:22', hygiene: true, cvss: 3.1, epss: 0.001 },
-  { id: 5, title: 'Open RDP Port Exposed', severity: 'High', occurrences: 1, target: 'acmecorp.com', hygiene: false, cvss: 7.4, epss: 0.12 },
-  { id: 6, title: 'Apache Log4j RCE (Log4Shell)', severity: 'Critical', occurrences: 2, target: 'techstart.io', hygiene: false, cvss: 10.0, epss: 0.97, cve: 'CVE-2021-44228' },
+  {
+    id: 1, title: 'Apache Log4j Remote Code Execution (Log4Shell)',
+    severity: 'Critical', occurrences: 2, target: 'api.acmecorp.com',
+    hygiene: false, cvss: 10.0, epss: 0.974, cve: 'CVE-2021-44228',
+    status: 'open', discovered: '14 May 2025',
+    description: 'A critical vulnerability in Apache Log4j allows unauthenticated remote code execution via specially crafted JNDI lookup strings.',
+    remediation: 'Upgrade Log4j to version 2.17.1 or later. Apply the JVM flag `-Dlog4j2.formatMsgNoLookups=true` as a temporary mitigation.',
+    references: ['https://nvd.nist.gov/vuln/detail/CVE-2021-44228', 'https://logging.apache.org/log4j/2.x/security.html'],
+  },
+  {
+    id: 2, title: 'Exposed RDP Port (3389) Without MFA',
+    severity: 'Critical', occurrences: 1, target: 'admin.acmecorp.com',
+    hygiene: false, cvss: 9.8, epss: 0.423, cve: undefined,
+    status: 'open', discovered: '14 May 2025',
+    description: 'RDP port 3389 is exposed to the public internet without multi-factor authentication, making it vulnerable to brute-force attacks.',
+    remediation: 'Restrict RDP access via firewall rules to trusted IPs only, or place behind a VPN. Enable NLA and MFA.',
+    references: [],
+  },
+  {
+    id: 3, title: 'SQL Injection in Login Endpoint',
+    severity: 'Critical', occurrences: 1, target: 'app.acmecorp.com',
+    hygiene: false, cvss: 9.1, epss: 0.189, cve: undefined,
+    status: 'open', discovered: '13 May 2025',
+    description: 'The /api/auth/login endpoint is vulnerable to SQL injection, allowing an attacker to bypass authentication or extract the full database.',
+    remediation: 'Use parameterized queries or prepared statements. Implement a WAF rule to block SQL injection patterns.',
+    references: ['https://owasp.org/www-community/attacks/SQL_Injection'],
+  },
+  {
+    id: 4, title: 'SSL Certificate Expiring in 7 Days',
+    severity: 'High', occurrences: 1, target: 'mail.acmecorp.com',
+    hygiene: false, cvss: 7.5, epss: 0.05, cve: undefined,
+    status: 'open', discovered: '12 May 2025',
+    description: 'The SSL/TLS certificate for mail.acmecorp.com expires in 7 days. After expiry, all HTTPS traffic will show browser warnings.',
+    remediation: 'Renew the certificate immediately. Consider enabling auto-renewal via Let\'s Encrypt or your CA.',
+    references: [],
+  },
+  {
+    id: 5, title: 'Open RDP Port Exposed',
+    severity: 'High', occurrences: 1, target: 'techstart.io',
+    hygiene: false, cvss: 7.4, epss: 0.12, cve: undefined,
+    status: 'open', discovered: '12 May 2025',
+    description: 'TCP port 3389 (RDP) is exposed publicly without access controls.',
+    remediation: 'Close the port or restrict via firewall to specific IPs. Use a VPN for remote access.',
+    references: [],
+  },
+  {
+    id: 6, title: 'Missing HTTP Security Headers',
+    severity: 'Medium', occurrences: 5, target: 'www.acmecorp.com',
+    hygiene: true, cvss: 5.4, epss: 0.003, cve: undefined,
+    status: 'open', discovered: '11 May 2025',
+    description: 'The server does not return critical security headers: Content-Security-Policy, X-Frame-Options, and Strict-Transport-Security.',
+    remediation: 'Add the missing headers in your web server configuration (nginx/Apache) or application middleware.',
+    references: ['https://securityheaders.com'],
+  },
+  {
+    id: 7, title: 'Insecure TLS 1.0 / 1.1 Enabled',
+    severity: 'Medium', occurrences: 3, target: 'www.acmecorp.com',
+    hygiene: true, cvss: 5.3, epss: 0.002, cve: undefined,
+    status: 'open', discovered: '11 May 2025',
+    description: 'The server accepts connections using deprecated TLS 1.0 and TLS 1.1 protocols, which have known vulnerabilities.',
+    remediation: 'Disable TLS 1.0 and 1.1 in your server configuration. Enforce TLS 1.2 minimum, prefer TLS 1.3.',
+    references: [],
+  },
+  {
+    id: 8, title: 'Insecure SSH Ciphers Accepted',
+    severity: 'Medium', occurrences: 6, target: 'api.acmecorp.com',
+    hygiene: true, cvss: 5.3, epss: 0.001, cve: undefined,
+    status: 'open', discovered: '10 May 2025',
+    description: 'The SSH server accepts weak cipher suites including arcfour and 3des-cbc which are considered cryptographically insecure.',
+    remediation: 'Update /etc/ssh/sshd_config to remove deprecated ciphers. Allow only modern ciphers like chacha20-poly1305 and aes256-gcm.',
+    references: [],
+  },
+  {
+    id: 9, title: 'Directory Listing Enabled',
+    severity: 'Low', occurrences: 2, target: 'cdn.acmecorp.com',
+    hygiene: false, cvss: 3.7, epss: 0.001, cve: undefined,
+    status: 'open', discovered: '10 May 2025',
+    description: 'The web server has directory listing enabled, exposing file and folder structures to unauthenticated users.',
+    remediation: 'Disable directory listing in your nginx/Apache configuration with `Options -Indexes`.',
+    references: [],
+  },
+  {
+    id: 10, title: 'Weak SSH Key Exchange Algorithms',
+    severity: 'Low', occurrences: 1, target: 'api.acmecorp.com:22',
+    hygiene: true, cvss: 3.1, epss: 0.001, cve: undefined,
+    status: 'open', discovered: '10 May 2025',
+    description: 'The SSH server supports diffie-hellman-group1-sha1 (Logjam/FREAK vulnerable) for key exchange.',
+    remediation: 'Remove weak KEX algorithms from the SSH server configuration and use only curve25519-sha256 or diffie-hellman-group14-sha256.',
+    references: [],
+  },
 ];
 
 const NOISE_ITEMS = [
@@ -28,47 +112,102 @@ const SEV_COLOR: Record<string, string> = {
   Critical: '#ef4444',
   High: '#f59e0b',
   Medium: '#3b82f6',
-  Low: '#22c55e',
+  Low: '#34d399',
+};
+
+const GLASS: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.07)',
+  backdropFilter: 'blur(18px)',
+  WebkitBackdropFilter: 'blur(18px)',
+  border: '1px solid rgba(255,255,255,0.13)',
+  boxShadow: '0 4px 28px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)',
 };
 
 function SeverityBadge({ severity }: { severity: string }) {
   const color = SEV_COLOR[severity] ?? '#94a3b8';
   return (
     <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-      style={{ background: `${color}15`, color }}>
+      style={{ background: `${color}18`, color, border: `1px solid ${color}30` }}>
       {severity}
     </span>
   );
 }
 
+function EpssBar({ value }: { value: number }) {
+  const color = value > 0.5 ? '#ef4444' : value > 0.1 ? '#f59e0b' : '#34d399';
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 rounded-full h-1.5" style={{ background: 'rgba(255,255,255,0.1)' }}>
+        <div className="h-1.5 rounded-full transition-all" style={{ width: `${value * 100}%`, background: color }} />
+      </div>
+      <span className="text-xs font-mono font-semibold" style={{ color }}>{(value * 100).toFixed(1)}%</span>
+    </div>
+  );
+}
+
+const counts = {
+  Critical: ISSUES.filter(i => i.severity === 'Critical').length,
+  High: ISSUES.filter(i => i.severity === 'High').length,
+  Medium: ISSUES.filter(i => i.severity === 'Medium').length,
+  Low: ISSUES.filter(i => i.severity === 'Low').length,
+};
+
 export default function VulnerabilitiesPage() {
   const [tab, setTab] = useState<'current' | 'fixed' | 'snoozed' | 'noise'>('current');
   const [selected, setSelected] = useState<typeof ISSUES[0] | null>(null);
   const [severityFilter, setSeverityFilter] = useState('All');
+  const [search, setSearch] = useState('');
 
-  const filtered = ISSUES.filter(i => severityFilter === 'All' || i.severity === severityFilter);
+  const filtered = ISSUES.filter(i => {
+    const matchSev = severityFilter === 'All' || i.severity === severityFilter;
+    const matchSearch = !search || i.title.toLowerCase().includes(search.toLowerCase()) || i.target.toLowerCase().includes(search.toLowerCase());
+    return matchSev && matchSearch;
+  });
 
   return (
     <div className="p-8">
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-black text-2xl" style={{ color: '#0f172a' }}>Issues</h1>
+        <div>
+          <h1 className="font-black text-2xl mb-1" style={{ color: '#f0fdf4' }}>Issues</h1>
+          <p className="text-sm" style={{ color: 'rgba(167,243,208,0.5)' }}>Security findings across all your targets</p>
+        </div>
         <div className="flex items-center gap-2">
           <button className="text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5"
-            style={{ background: '#f1f5f9', color: '#475569' }}>
+            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(167,243,208,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             View all checks
           </button>
           <button className="text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2"
-            style={{ background: '#6366f1', color: '#fff' }}>
+            style={{ background: '#34d399', color: '#021a12' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m14.5 2-8.5 8.5 1.5 1.5 8.5-8.5-1.5-1.5z"/><path d="m7 14-5 5"/><path d="m15.5 4.5 4 4"/></svg>
             New pentest
           </button>
         </div>
       </div>
 
+      {/* Severity summary strip */}
+      <div className="grid grid-cols-4 gap-3 mb-6">
+        {(['Critical', 'High', 'Medium', 'Low'] as const).map(sev => (
+          <button key={sev} onClick={() => setSeverityFilter(s => s === sev ? 'All' : sev)}
+            className="rounded-2xl px-4 py-3 text-left transition-all"
+            style={{
+              ...GLASS,
+              border: severityFilter === sev ? `1px solid ${SEV_COLOR[sev]}50` : GLASS.border,
+              background: severityFilter === sev ? `${SEV_COLOR[sev]}10` : GLASS.background,
+            }}>
+            <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: SEV_COLOR[sev] }}>{sev}</p>
+            <p className="font-black text-2xl" style={{ color: SEV_COLOR[sev] }}>{counts[sev]}</p>
+            <p className="text-xs mt-1" style={{ color: 'rgba(167,243,208,0.45)' }}>
+              {counts[sev] === 1 ? 'issue' : 'issues'}
+            </p>
+          </button>
+        ))}
+      </div>
+
       {/* Tabs */}
-      <div className="flex items-center gap-0 mb-6" style={{ borderBottom: '1px solid #f1f5f9' }}>
+      <div className="flex items-center gap-0 mb-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         {([
           { key: 'current', label: 'Current', count: ISSUES.length },
           { key: 'fixed', label: 'Fixed', count: null },
@@ -78,14 +217,14 @@ export default function VulnerabilitiesPage() {
           <button key={t.key} onClick={() => setTab(t.key)}
             className="px-4 py-2.5 text-sm font-semibold flex items-center gap-1.5 transition-all"
             style={{
-              color: tab === t.key ? '#6366f1' : '#64748b',
-              borderBottom: tab === t.key ? '2px solid #6366f1' : '2px solid transparent',
+              color: tab === t.key ? '#34d399' : 'rgba(167,243,208,0.5)',
+              borderBottom: tab === t.key ? '2px solid #34d399' : '2px solid transparent',
               marginBottom: '-1px',
             }}>
             {t.label}
             {t.count !== null && (
               <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
-                style={{ background: tab === t.key ? 'rgba(99,102,241,0.1)' : '#f1f5f9', color: tab === t.key ? '#6366f1' : '#94a3b8' }}>
+                style={{ background: tab === t.key ? 'rgba(52,211,153,0.15)' : 'rgba(255,255,255,0.07)', color: tab === t.key ? '#34d399' : 'rgba(167,243,208,0.5)' }}>
                 {t.count}
               </span>
             )}
@@ -93,111 +232,212 @@ export default function VulnerabilitiesPage() {
         ))}
       </div>
 
+      {/* CURRENT TAB */}
       {tab === 'current' && (
         <>
           {/* Noise notice */}
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4 text-sm"
-            style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <span style={{ color: '#475569' }}>We detected <strong style={{ color: '#0f172a' }}>23 more items</strong> but filtered these as noise. <span style={{ color: '#6366f1', cursor: 'pointer' }}>Learn more about noise filtering</span></span>
+            style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span style={{ color: 'rgba(167,243,208,0.7)' }}>
+              We detected <strong style={{ color: '#f0fdf4' }}>23 more items</strong> but filtered these as noise. {' '}
+              <span className="cursor-pointer" style={{ color: '#34d399' }}>Learn more about noise filtering →</span>
+            </span>
           </div>
 
           {/* Filter bar */}
           <div className="flex items-center gap-2 mb-4 flex-wrap">
-            <span className="text-xs font-semibold" style={{ color: '#64748b' }}>{filtered.length} issues · {filtered.reduce((a, i) => a + i.occurrences, 0)} occurrences</span>
+            <span className="text-xs font-semibold" style={{ color: 'rgba(167,243,208,0.5)' }}>
+              {filtered.length} issues · {filtered.reduce((a, i) => a + i.occurrences, 0)} occurrences
+            </span>
             <div className="ml-auto flex items-center gap-2">
-              <input type="text" placeholder="Search" className="scan-input rounded-lg px-3 py-1.5 text-xs" style={{ width: '160px' }} />
-              {['All', 'Critical', 'High', 'Medium', 'Low'].map(s => (
+              <div className="relative">
+                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(167,243,208,0.4)" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" placeholder="Search issues…" value={search} onChange={e => setSearch(e.target.value)}
+                  className="scan-input rounded-lg pl-8 pr-3 py-1.5 text-xs" style={{ width: '170px' }} />
+              </div>
+              {(['All', 'Critical', 'High', 'Medium', 'Low'] as const).map(s => (
                 <button key={s} onClick={() => setSeverityFilter(s)}
                   className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"
                   style={{
-                    background: severityFilter === s ? (s === 'All' ? 'rgba(99,102,241,0.1)' : `${SEV_COLOR[s]}15`) : '#f1f5f9',
-                    color: severityFilter === s ? (s === 'All' ? '#6366f1' : SEV_COLOR[s]) : '#64748b',
+                    background: severityFilter === s ? (s === 'All' ? 'rgba(52,211,153,0.15)' : `${SEV_COLOR[s]}18`) : 'rgba(255,255,255,0.06)',
+                    color: severityFilter === s ? (s === 'All' ? '#34d399' : SEV_COLOR[s]) : 'rgba(167,243,208,0.5)',
+                    border: '1px solid rgba(255,255,255,0.08)',
                   }}>
                   {s}
                 </button>
               ))}
-              <button className="text-xs font-semibold px-3 py-1.5 rounded-lg" style={{ background: '#f1f5f9', color: '#64748b' }}>Export</button>
+              <button className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(167,243,208,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                Export
+              </button>
             </div>
           </div>
 
           {/* Issue list + detail panel */}
-          <div className="flex gap-4">
-            <div className="card-glass rounded-2xl overflow-hidden" style={{ flex: selected ? '0 0 55%' : '1' }}>
-              {filtered.map((issue, i) => (
-                <div key={issue.id} onClick={() => setSelected(issue)}
-                  className="px-5 py-4 cursor-pointer transition-colors hover:bg-gray-50"
-                  style={{
-                    borderBottom: i < filtered.length - 1 ? '1px solid #f8fafc' : 'none',
-                    background: selected?.id === issue.id ? 'rgba(99,102,241,0.04)' : undefined,
-                    borderLeft: selected?.id === issue.id ? '3px solid #6366f1' : '3px solid transparent',
-                  }}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ flexShrink: 0, color: '#94a3b8' }}><polyline points="9 18 15 12 9 6"/></svg>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm truncate" style={{ color: '#0f172a' }}>{issue.title}</p>
-                        <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>
-                          {issue.occurrences} occurrence{issue.occurrences !== 1 ? 's' : ''} · <span style={{ fontFamily: 'monospace' }}>{issue.target}</span>
+          <div className="flex gap-4 min-h-0">
+
+            {/* List */}
+            <div className="rounded-2xl overflow-hidden flex-shrink-0 transition-all"
+              style={{ ...GLASS, width: selected ? '50%' : '100%' }}>
+
+              {/* Table header */}
+              <div className="px-5 py-3 flex items-center gap-4 text-xs font-bold uppercase tracking-wide"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', color: 'rgba(167,243,208,0.4)' }}>
+                <span className="flex-1">Issue</span>
+                <span style={{ width: '80px' }}>Severity</span>
+                <span style={{ width: '50px', textAlign: 'right' }}>CVSS</span>
+                <span style={{ width: '24px' }} />
+              </div>
+
+              {filtered.length === 0 ? (
+                <div className="px-5 py-12 text-center">
+                  <p className="text-sm" style={{ color: 'rgba(167,243,208,0.4)' }}>No issues match the current filters.</p>
+                </div>
+              ) : (
+                filtered.map((issue, i) => (
+                  <div key={issue.id} onClick={() => setSelected(s => s?.id === issue.id ? null : issue)}
+                    className="px-5 py-4 cursor-pointer transition-all"
+                    style={{
+                      borderBottom: i < filtered.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                      background: selected?.id === issue.id ? 'rgba(52,211,153,0.08)' : 'transparent',
+                      borderLeft: selected?.id === issue.id ? '3px solid #34d399' : '3px solid transparent',
+                    }}
+                    onMouseEnter={e => { if (selected?.id !== issue.id) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                    onMouseLeave={e => { if (selected?.id !== issue.id) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          {issue.cve && (
+                            <span className="text-xs font-mono" style={{ color: '#a78bfa' }}>{issue.cve}</span>
+                          )}
+                          {issue.epss > 0.1 && (
+                            <span className="text-xs font-bold px-1.5 rounded" style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}>
+                              EXPLOIT
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-semibold text-sm truncate" style={{ color: '#f0fdf4' }}>{issue.title}</p>
+                        <p className="text-xs mt-0.5 font-mono truncate" style={{ color: 'rgba(167,243,208,0.45)' }}>
+                          {issue.target} · {issue.occurrences} occurrence{issue.occurrences !== 1 ? 's' : ''}
                         </p>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                      <SeverityBadge severity={issue.severity} />
-                      {issue.cvss && <span className="text-xs" style={{ color: '#94a3b8' }}>CVSS {issue.cvss}</span>}
+                      <div style={{ width: '80px', flexShrink: 0 }}>
+                        <SeverityBadge severity={issue.severity} />
+                      </div>
+                      <div style={{ width: '50px', flexShrink: 0, textAlign: 'right' }}>
+                        <span className="text-sm font-bold" style={{ color: SEV_COLOR[issue.severity] }}>{issue.cvss.toFixed(1)}</span>
+                      </div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(167,243,208,0.3)" strokeWidth="1.5"
+                        style={{ flexShrink: 0, transform: selected?.id === issue.id ? 'rotate(90deg)' : undefined, transition: 'transform 0.2s' }}>
+                        <polyline points="9 18 15 12 9 6"/>
+                      </svg>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             {/* Detail panel */}
             {selected && (
-              <div className="card-glass rounded-2xl p-6 flex-1 min-w-0">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
+              <div className="rounded-2xl overflow-hidden flex-1 min-w-0" style={GLASS}>
+                <div className="px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <SeverityBadge severity={selected.severity} />
-                      {selected.cve && <span className="text-xs font-mono" style={{ color: '#94a3b8' }}>{selected.cve}</span>}
-                      {selected.cvss && <span className="text-xs font-semibold" style={{ color: '#94a3b8' }}>CVSS {selected.cvss}</span>}
+                      {selected.cve && (
+                        <span className="text-xs font-mono px-2 py-0.5 rounded-full"
+                          style={{ background: 'rgba(167,139,250,0.12)', color: '#a78bfa' }}>{selected.cve}</span>
+                      )}
                     </div>
-                    <h3 className="font-black text-base" style={{ color: '#0f172a' }}>{selected.title}</h3>
+                    <button onClick={() => setSelected(null)} style={{ color: 'rgba(167,243,208,0.4)' }}
+                      onMouseEnter={e => e.currentTarget.style.color = '#f0fdf4'}
+                      onMouseLeave={e => e.currentTarget.style.color = 'rgba(167,243,208,0.4)'}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
                   </div>
-                  <button onClick={() => setSelected(null)} style={{ color: '#94a3b8' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
+                  <h3 className="font-black text-base mt-3" style={{ color: '#f0fdf4' }}>{selected.title}</h3>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="px-6 py-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+
+                  {/* Metrics */}
+                  <div className="grid grid-cols-2 gap-2">
                     {[
-                      { label: 'Target', value: selected.target },
-                      { label: 'Occurrences', value: selected.occurrences.toString() },
-                      { label: 'CVSS Score', value: selected.cvss?.toString() ?? '—' },
-                      { label: 'EPSS', value: selected.epss ? `${(selected.epss * 100).toFixed(1)}%` : '—' },
-                    ].map(({ label, value }) => (
-                      <div key={label} className="rounded-xl p-3" style={{ background: '#f8fafc' }}>
-                        <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#94a3b8' }}>{label}</p>
-                        <p className="text-sm font-semibold" style={{ color: '#0f172a', fontFamily: label === 'Target' ? 'monospace' : undefined }}>{value}</p>
+                      { label: 'Target', value: selected.target, mono: true },
+                      { label: 'Occurrences', value: `${selected.occurrences}`, mono: false },
+                      { label: 'Discovered', value: selected.discovered, mono: false },
+                      { label: 'CVSS Score', value: selected.cvss.toFixed(1), mono: false },
+                    ].map(({ label, value, mono }) => (
+                      <div key={label} className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                        <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'rgba(167,243,208,0.4)' }}>{label}</p>
+                        <p className="text-sm font-semibold truncate" style={{ color: '#f0fdf4', fontFamily: mono ? 'monospace' : undefined }}>{value}</p>
                       </div>
                     ))}
                   </div>
 
-                  <div className="p-4 rounded-xl" style={{ background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.1)' }}>
-                    <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: '#6366f1' }}>Remediation</p>
-                    <p className="text-sm" style={{ color: '#475569' }}>
-                      Update your server configuration to disable weak cipher suites. Ensure TLS 1.2+ is enforced and remove any deprecated algorithms from the accepted cipher list.
+                  {/* EPSS */}
+                  <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                    <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'rgba(167,243,208,0.4)' }}>
+                      EPSS — Exploit Probability
+                    </p>
+                    <EpssBar value={selected.epss} />
+                    <p className="text-xs mt-1.5" style={{ color: 'rgba(167,243,208,0.4)' }}>
+                      {selected.epss > 0.5 ? '⚠️ High likelihood of active exploitation' : selected.epss > 0.1 ? 'Moderate exploit activity observed' : 'Low exploitation probability'}
                     </p>
                   </div>
 
-                  <div className="flex gap-2">
-                    <button className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
-                      style={{ background: 'rgba(99,102,241,0.08)', color: '#6366f1' }}>
+                  {/* Description */}
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'rgba(167,243,208,0.4)' }}>Description</p>
+                    <p className="text-sm leading-relaxed" style={{ color: 'rgba(167,243,208,0.75)' }}>{selected.description}</p>
+                  </div>
+
+                  {/* Remediation */}
+                  <div className="rounded-xl p-4" style={{ background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.2)' }}>
+                    <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: '#34d399' }}>
+                      Recommended Remediation
+                    </p>
+                    <p className="text-sm leading-relaxed" style={{ color: 'rgba(167,243,208,0.75)' }}>{selected.remediation}</p>
+                  </div>
+
+                  {/* References */}
+                  {selected.references.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'rgba(167,243,208,0.4)' }}>References</p>
+                      <div className="space-y-1">
+                        {selected.references.map((ref, i) => (
+                          <a key={i} href={ref} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-xs break-all"
+                            style={{ color: '#34d399' }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            {ref}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-2">
+                    <button className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all"
+                      style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(167,243,208,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}>
                       Snooze
                     </button>
-                    <button className="flex-1 py-2 rounded-xl text-xs font-bold text-white"
-                      style={{ background: '#6366f1' }}>
-                      Start pentest
+                    <button className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all"
+                      style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.18)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}>
+                      Mark as risk accepted
+                    </button>
+                    <button className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all"
+                      style={{ background: '#34d399', color: '#021a12' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#6ee7b7'}
+                      onMouseLeave={e => e.currentTarget.style.background = '#34d399'}>
+                      Start pentest →
                     </button>
                   </div>
                 </div>
@@ -207,52 +447,67 @@ export default function VulnerabilitiesPage() {
         </>
       )}
 
+      {/* FIXED TAB */}
       {tab === 'fixed' && (
-        <div className="card-glass rounded-2xl p-16 text-center">
-          <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: '#f1f5f9' }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
+        <div className="rounded-2xl p-16 text-center" style={GLASS}>
+          <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+            style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <p className="font-bold text-base mb-1" style={{ color: '#0f172a' }}>Any fixed issues will appear here</p>
-          <p className="text-sm mb-4" style={{ color: '#94a3b8' }}>Once an issue is resolved and confirmed in a new scan, it moves here.</p>
-          <button className="btn-primary text-white text-sm font-bold px-6 py-2.5 rounded-xl">
-            Take me to the Scans page →
+          <p className="font-bold text-base mb-1" style={{ color: '#f0fdf4' }}>Any fixed issues will appear here</p>
+          <p className="text-sm mb-5" style={{ color: 'rgba(167,243,208,0.5)', maxWidth: '360px', margin: '0 auto 20px' }}>
+            Once an issue is resolved and confirmed in a rescan, it moves here automatically.
+          </p>
+          <button className="text-sm font-bold px-6 py-2.5 rounded-xl"
+            style={{ background: '#34d399', color: '#021a12' }}>
+            Go to Scans →
           </button>
         </div>
       )}
 
+      {/* SNOOZED TAB */}
       {tab === 'snoozed' && (
-        <div className="card-glass rounded-2xl p-16 text-center">
-          <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: '#f1f5f9' }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><line x1="9" y1="9" x2="15" y2="9"/></svg>
+        <div className="rounded-2xl p-16 text-center" style={GLASS}>
+          <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(167,243,208,0.4)" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><line x1="9" y1="9" x2="15" y2="9"/></svg>
           </div>
-          <p className="font-bold text-base mb-1" style={{ color: '#0f172a' }}>No snoozed issues</p>
-          <p className="text-sm" style={{ color: '#94a3b8' }}>You can optionally snooze issues that you don't consider a problem.</p>
+          <p className="font-bold text-base mb-1" style={{ color: '#f0fdf4' }}>No snoozed issues</p>
+          <p className="text-sm" style={{ color: 'rgba(167,243,208,0.5)' }}>
+            Snooze issues you&apos;ve accepted as a known risk. They won&apos;t appear in your current count.
+          </p>
         </div>
       )}
 
+      {/* NOISE TAB */}
       {tab === 'noise' && (
         <>
           <div className="flex items-center gap-2 mb-4">
-            <span className="text-sm font-semibold" style={{ color: '#64748b' }}>{NOISE_ITEMS.length} noise items</span>
+            <span className="text-sm font-semibold" style={{ color: 'rgba(167,243,208,0.5)' }}>{NOISE_ITEMS.length} noise items</span>
             <div className="ml-auto flex gap-2">
-              <select className="scan-input rounded-lg px-3 py-1.5 text-xs" style={{ color: '#475569' }}>
-                <option>Tag</option>
+              <select className="scan-input rounded-lg px-3 py-1.5 text-xs">
+                <option>All targets</option>
+                <option>acmecorp.com</option>
+                <option>techstart.io</option>
               </select>
-              <select className="scan-input rounded-lg px-3 py-1.5 text-xs" style={{ color: '#475569' }}>
-                <option>Target</option>
-              </select>
-              <button className="text-xs font-semibold px-2 py-1.5" style={{ color: '#94a3b8' }}>What is noise?</button>
+              <button className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(167,243,208,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                What is noise?
+              </button>
             </div>
           </div>
-          <div className="card-glass rounded-2xl overflow-hidden">
+          <div className="rounded-2xl overflow-hidden" style={GLASS}>
             {NOISE_ITEMS.map((item, i) => (
-              <div key={i} className="flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                style={{ borderBottom: i < NOISE_ITEMS.length - 1 ? '1px solid #f8fafc' : 'none' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: '#94a3b8', flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+              <div key={i} className="flex items-center gap-3 px-5 py-4 cursor-pointer transition-colors"
+                style={{ borderBottom: i < NOISE_ITEMS.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'rgba(167,243,208,0.25)' }} />
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: '#0f172a' }}>{item}</p>
-                  <p className="text-xs mt-0.5" style={{ color: '#94a3b8', fontFamily: 'monospace' }}>Noise · www.uir.ac.ma</p>
+                  <p className="text-sm font-semibold" style={{ color: 'rgba(167,243,208,0.75)' }}>{item}</p>
+                  <p className="text-xs mt-0.5 font-mono" style={{ color: 'rgba(167,243,208,0.35)' }}>Noise · www.acmecorp.com</p>
                 </div>
+                <svg className="ml-auto" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(167,243,208,0.25)" strokeWidth="1.5"><polyline points="9 18 15 12 9 6"/></svg>
               </div>
             ))}
           </div>

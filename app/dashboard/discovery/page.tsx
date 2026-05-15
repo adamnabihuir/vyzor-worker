@@ -1,129 +1,283 @@
 'use client';
 
-const RECON_FEATURES = [
-  { icon: '🗂️', title: 'Container images', desc: 'Nothing detected. Add more cloud integrations to improve detection.', locked: false, empty: true },
-  { icon: '🌐', title: 'Domain detection', desc: 'Discover domains related to your targets using automated detection tools.', locked: true },
-  { icon: '🔍', title: 'Subdomain detection', desc: 'Keep track of all subdomains without the headache using automated enumeration.', locked: true },
-  { icon: '🔒', title: 'Login detection', desc: 'Continuously monitor for login pages within your live targets.', locked: true },
-  { icon: '⚙️', title: 'API detection', desc: 'Continuously monitor for APIs related to your live targets using domain detection tools.', locked: true },
+import { useState } from 'react';
+
+const GLASS: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.07)',
+  backdropFilter: 'blur(18px)',
+  WebkitBackdropFilter: 'blur(18px)',
+  border: '1px solid rgba(255,255,255,0.13)',
+  boxShadow: '0 4px 28px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)',
+};
+
+const ASSETS = [
+  { domain: 'api.acmecorp.com', type: 'API', ip: '104.21.8.1', status: 'Active', ports: '443', discovered: '14 May' },
+  { domain: 'admin.acmecorp.com', type: 'Admin', ip: '104.21.8.2', status: 'Exposed', ports: '443, 8080', discovered: '14 May' },
+  { domain: 'staging.acmecorp.com', type: 'Dev', ip: '104.21.8.3', status: 'Active', ports: '443', discovered: '14 May' },
+  { domain: 'cdn.acmecorp.com', type: 'CDN', ip: '104.21.8.4', status: 'Active', ports: '80, 443', discovered: '13 May' },
+  { domain: 'mail.acmecorp.com', type: 'Mail', ip: '104.21.8.5', status: 'Warn', ports: '25, 443, 587', discovered: '13 May' },
+  { domain: 'dev.acmecorp.com', type: 'Dev', ip: '104.21.8.6', status: 'Active', ports: '3000', discovered: '12 May' },
+  { domain: 'vpn.acmecorp.com', type: 'VPN', ip: '104.21.8.7', status: 'Active', ports: '1194', discovered: '12 May' },
+  { domain: 's3.acmecorp.com', type: 'Cloud', ip: '104.21.8.8', status: 'Critical', ports: '443', discovered: '11 May' },
+  { domain: 'api.techstart.io', type: 'API', ip: '185.53.177.10', status: 'Active', ports: '443', discovered: '11 May' },
+  { domain: 'app.techstart.io', type: 'Web', ip: '185.53.177.11', status: 'Active', ports: '80, 443', discovered: '10 May' },
+  { domain: 'beta.techstart.io', type: 'Dev', ip: '185.53.177.12', status: 'Active', ports: '3000', discovered: '10 May' },
+  { domain: 'dashboard.techstart.io', type: 'Admin', ip: '185.53.177.13', status: 'Warn', ports: '443, 8443', discovered: '9 May' },
 ];
 
-const CLOUD_PROVIDERS = [
-  { name: 'Amazon Web Services', icon: '☁️', color: '#f59e0b' },
-  { name: 'Microsoft Azure', icon: '🔷', color: '#0ea5e9' },
-  { name: 'Google Cloud', icon: '🌈', color: '#22c55e' },
-  { name: 'Cloudflare', icon: '🔶', color: '#f97316' },
+const TECHNOLOGIES = [
+  { name: 'nginx', version: '1.24', assets: 8, category: 'Web Server' },
+  { name: 'Apache', version: '2.4', assets: 4, category: 'Web Server' },
+  { name: 'React', version: '18', assets: 6, category: 'Framework' },
+  { name: 'Node.js', version: '20', assets: 5, category: 'Framework' },
+  { name: 'PostgreSQL', version: '15', assets: 3, category: 'Database' },
+  { name: 'Redis', version: '7', assets: 2, category: 'Database' },
+  { name: 'AWS S3', version: '', assets: 4, category: 'Cloud' },
+  { name: 'CloudFront', version: '', assets: 3, category: 'Cloud' },
+  { name: "Let's Encrypt", version: '', assets: 9, category: 'CDN' },
+  { name: 'Cloudflare', version: '', assets: 7, category: 'CDN' },
+  { name: 'WordPress', version: '6.4', assets: 2, category: 'CMS' },
+  { name: 'PHP', version: '8.2', assets: 3, category: 'Framework' },
+  { name: 'Docker', version: '', assets: 5, category: 'Cloud' },
+  { name: 'Kubernetes', version: '', assets: 2, category: 'Cloud' },
+  { name: 'GitHub Actions', version: '', assets: 4, category: 'Framework' },
+  { name: 'Stripe', version: '', assets: 2, category: 'Framework' },
 ];
+
+const CATEGORY_COLORS: Record<string, { bg: string; color: string }> = {
+  'Web Server': { bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' },
+  'Framework':  { bg: 'rgba(139,92,246,0.15)', color: '#a78bfa' },
+  'Database':   { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' },
+  'Cloud':      { bg: 'rgba(14,165,233,0.15)', color: '#38bdf8' },
+  'CDN':        { bg: 'rgba(52,211,153,0.12)', color: '#34d399' },
+  'CMS':        { bg: 'rgba(239,68,68,0.12)', color: '#f87171' },
+};
+
+const TYPE_FILTERS = ['All', 'Subdomains', 'IPs', 'APIs', 'Admin panels', 'Cloud'];
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === 'Active') {
+    return (
+      <div className="flex items-center gap-1.5">
+        <div className="w-2 h-2 rounded-full" style={{ background: '#34d399' }} />
+        <span style={{ color: '#34d399', fontSize: '0.75rem', fontWeight: 600 }}>Active</span>
+      </div>
+    );
+  }
+  if (status === 'Exposed') {
+    return (
+      <div className="flex items-center gap-1.5">
+        <div className="w-2 h-2 rounded-full" style={{ background: '#f59e0b' }} />
+        <span className="px-1.5 py-0.5 rounded-md text-xs font-bold" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>Exposed</span>
+      </div>
+    );
+  }
+  if (status === 'Warn') {
+    return (
+      <div className="flex items-center gap-1.5">
+        <div className="w-2 h-2 rounded-full" style={{ background: '#f59e0b' }} />
+        <span className="px-1.5 py-0.5 rounded-md text-xs font-bold" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>Warn</span>
+      </div>
+    );
+  }
+  if (status === 'Critical') {
+    return (
+      <div className="flex items-center gap-1.5">
+        <div className="w-2 h-2 rounded-full" style={{ background: '#ef4444' }} />
+        <span className="px-1.5 py-0.5 rounded-md text-xs font-bold" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Critical</span>
+      </div>
+    );
+  }
+  return null;
+}
 
 export default function DiscoveryPage() {
+  const [tab, setTab] = useState<'assets' | 'technologies'>('assets');
+  const [filter, setFilter] = useState('All');
+  const [search, setSearch] = useState('');
+
+  const filteredAssets = ASSETS.filter(a => {
+    if (search && !a.domain.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filter === 'All') return true;
+    if (filter === 'APIs') return a.type === 'API';
+    if (filter === 'Admin panels') return a.type === 'Admin';
+    if (filter === 'Cloud') return a.type === 'Cloud';
+    if (filter === 'Subdomains') return a.domain.split('.').length > 2;
+    if (filter === 'IPs') return false;
+    return true;
+  });
+
   return (
-    <div className="p-8">
+    <div className="p-8" style={{ minHeight: '100vh' }}>
+      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-black text-2xl mb-1" style={{ color: '#0f172a' }}>Discovery</h1>
-          <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>Automatically map your external attack surface</p>
+          <h1 className="font-black text-2xl mb-1" style={{ color: '#f0fdf4' }}>Discovery</h1>
+          <p style={{ color: 'rgba(167,243,208,0.55)', fontSize: '0.875rem' }}>All assets discovered across your targets</p>
         </div>
-        <button className="btn-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl flex items-center gap-2">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add asset
+        <button
+          className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl transition-all"
+          style={{ background: '#34d399', color: '#021a12' }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#2ec48a')}
+          onMouseLeave={e => (e.currentTarget.style.background = '#34d399')}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export
         </button>
       </div>
 
-      {/* Target Recon */}
-      <div className="card-glass rounded-2xl overflow-hidden mb-6">
-        <div className="px-6 py-5" style={{ borderBottom: '1px solid #f1f5f9' }}>
-          <h2 className="font-bold text-base" style={{ color: '#0f172a' }}>Target Recon</h2>
-          <p className="text-sm mt-1" style={{ color: '#94a3b8' }}>Advanced reconnaissance — upgrade to Enterprise to unlock all features</p>
-        </div>
-        <div className="divide-y" style={{ borderColor: '#f8fafc' }}>
-          {RECON_FEATURES.map((f, i) => (
-            <div key={i} className="flex items-center justify-between px-6 py-5" style={{ opacity: f.locked ? 0.7 : 1 }}>
-              <div className="flex items-start gap-4">
-                <span className="text-xl">{f.icon}</span>
-                <div>
-                  <p className="font-semibold text-sm" style={{ color: '#0f172a' }}>{f.title}</p>
-                  <p className="text-xs mt-0.5" style={{ color: '#94a3b8', maxWidth: '480px' }}>{f.desc}</p>
-                </div>
-              </div>
-              {f.locked ? (
-                <button className="text-xs font-semibold px-4 py-2 rounded-xl flex items-center gap-2 transition-all"
-                  style={{ background: 'rgba(99,102,241,0.08)', color: '#6366f1', border: '1px solid rgba(99,102,241,0.15)' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.15)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,102,241,0.08)'}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                  Talk to Sales
+      {/* Stats strip */}
+      <div className="grid grid-cols-4 gap-4 mb-8">
+        {[
+          { label: 'Total assets', value: '216', icon: '🗂️' },
+          { label: 'Subdomains', value: '49', icon: '🌐' },
+          { label: 'IPs', value: '34', icon: '🔌' },
+          { label: 'Technologies', value: '28', icon: '⚙️' },
+        ].map(stat => (
+          <div key={stat.label} className="rounded-2xl p-5" style={GLASS}>
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-xl">{stat.icon}</span>
+              <span style={{ color: 'rgba(167,243,208,0.55)', fontSize: '0.75rem', fontWeight: 600 }}>{stat.label}</span>
+            </div>
+            <div className="font-black text-3xl" style={{ color: '#f0fdf4' }}>{stat.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 p-1 rounded-xl w-fit" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        {(['assets', 'technologies'] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className="px-5 py-2 rounded-lg text-sm font-semibold transition-all capitalize"
+            style={{
+              background: tab === t ? 'rgba(52,211,153,0.15)' : 'transparent',
+              color: tab === t ? '#34d399' : 'rgba(167,243,208,0.55)',
+              border: tab === t ? '1px solid rgba(52,211,153,0.25)' : '1px solid transparent',
+            }}
+          >
+            {t === 'assets' ? 'Assets' : 'Technologies'}
+          </button>
+        ))}
+      </div>
+
+      {/* Assets tab */}
+      {tab === 'assets' && (
+        <div className="rounded-2xl overflow-hidden" style={GLASS}>
+          {/* Filter bar */}
+          <div className="flex items-center gap-3 px-5 py-4 flex-wrap" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="relative">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(167,243,208,0.4)" strokeWidth="2" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}>
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input
+                type="text"
+                placeholder="Search assets..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '10px',
+                  paddingLeft: '32px',
+                  paddingRight: '12px',
+                  paddingTop: '7px',
+                  paddingBottom: '7px',
+                  color: '#f0fdf4',
+                  fontSize: '0.813rem',
+                  outline: 'none',
+                  width: '200px',
+                }}
+              />
+            </div>
+            <div className="flex gap-1 flex-wrap">
+              {TYPE_FILTERS.map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={{
+                    background: filter === f ? 'rgba(52,211,153,0.15)' : 'rgba(255,255,255,0.05)',
+                    color: filter === f ? '#34d399' : 'rgba(167,243,208,0.55)',
+                    border: filter === f ? '1px solid rgba(52,211,153,0.25)' : '1px solid transparent',
+                  }}
+                >
+                  {f}
                 </button>
-              ) : f.empty ? (
-                <span className="text-xs" style={{ color: '#94a3b8' }}>No data</span>
-              ) : null}
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Cloud Detection */}
-      <div className="card-glass rounded-2xl overflow-hidden mb-6">
-        <div className="px-6 py-5" style={{ borderBottom: '1px solid #f1f5f9' }}>
-          <h2 className="font-bold text-base" style={{ color: '#0f172a' }}>Cloud Detection</h2>
-          <p className="text-sm mt-1" style={{ color: '#94a3b8' }}>Assets detected from your targets that may be linked to cloud accounts</p>
-        </div>
-        <div className="px-6 py-5">
-          <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.15)' }}>
-            <div className="flex items-center gap-3">
-              <span className="text-xl">🔷</span>
-              <div>
-                <p className="font-semibold text-sm" style={{ color: '#0f172a' }}>Unknown Azure account</p>
-                <p className="text-xs" style={{ color: '#94a3b8' }}>Based on assets discovered in your targets</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"
-                style={{ background: 'rgba(99,102,241,0.08)', color: '#6366f1' }}>
-                + Add integration
-              </button>
-              <button className="text-xs font-semibold px-3 py-1.5 rounded-lg" style={{ color: '#94a3b8' }}>
-                × Dismiss
-              </button>
-            </div>
+            <span className="ml-auto text-xs" style={{ color: 'rgba(167,243,208,0.4)' }}>{filteredAssets.length} assets</span>
           </div>
-        </div>
-      </div>
 
-      {/* Cloud Integrations */}
-      <div className="card-glass rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f1f5f9' }}>
-          <div>
-            <h2 className="font-bold text-base" style={{ color: '#0f172a' }}>Cloud Integrations</h2>
-            <p className="text-sm mt-1" style={{ color: '#94a3b8' }}>Connect your cloud accounts to automatically discover and monitor assets</p>
-          </div>
-        </div>
-        <div className="px-6 py-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            {CLOUD_PROVIDERS.map((p, i) => (
-              <button key={i}
-                className="flex flex-col items-center gap-3 p-5 rounded-xl border-2 border-dashed transition-all"
-                style={{ borderColor: '#e2e8f0', color: '#64748b' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.background = 'rgba(99,102,241,0.03)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'transparent'; }}>
-                <span className="text-3xl">{p.icon}</span>
-                <span className="text-xs font-semibold text-center" style={{ color: '#475569' }}>{p.name}</span>
-                <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(99,102,241,0.08)', color: '#6366f1' }}>+ Connect</span>
-              </button>
+          {/* Table header */}
+          <div className="grid px-5 py-3" style={{ gridTemplateColumns: '1fr 90px 130px 130px 130px 100px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+            {['Domain', 'Type', 'IP Address', 'Status', 'Port(s)', 'Discovered'].map(h => (
+              <span key={h} style={{ color: 'rgba(167,243,208,0.4)', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
             ))}
           </div>
 
-          <div className="text-center py-8" style={{ borderTop: '1px solid #f1f5f9' }}>
-            <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center text-3xl" style={{ background: '#f1f5f9' }}>☁️</div>
-            <p className="font-semibold mb-1" style={{ color: '#0f172a' }}>No cloud assets connected yet</p>
-            <p className="text-sm mb-4" style={{ color: '#94a3b8' }}>Connect AWS, Azure, GCP or Cloudflare to automatically manage and scan your assets</p>
-            <button className="btn-primary text-white text-sm font-bold px-6 py-2.5 rounded-xl">
-              + Add asset
-            </button>
+          {/* Rows */}
+          <div>
+            {filteredAssets.map((asset, i) => (
+              <div
+                key={asset.domain}
+                className="grid px-5 py-3.5 transition-colors"
+                style={{
+                  gridTemplateColumns: '1fr 90px 130px 130px 130px 100px',
+                  borderBottom: i < filteredAssets.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                  background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.04)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(52,211,153,0.04)')}
+                onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.04)')}
+              >
+                <span className="font-mono text-sm font-semibold" style={{ color: '#f0fdf4' }}>{asset.domain}</span>
+                <span>
+                  <span className="text-xs px-2 py-0.5 rounded-md font-semibold" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(167,243,208,0.55)' }}>{asset.type}</span>
+                </span>
+                <span className="font-mono text-xs" style={{ color: 'rgba(167,243,208,0.55)' }}>{asset.ip}</span>
+                <span><StatusBadge status={asset.status} /></span>
+                <span className="font-mono text-xs" style={{ color: 'rgba(167,243,208,0.55)' }}>{asset.ports}</span>
+                <span className="text-xs" style={{ color: 'rgba(167,243,208,0.4)' }}>{asset.discovered}</span>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Technologies tab */}
+      {tab === 'technologies' && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {TECHNOLOGIES.map(tech => {
+            const cat = CATEGORY_COLORS[tech.category] ?? { bg: 'rgba(255,255,255,0.08)', color: 'rgba(167,243,208,0.55)' };
+            return (
+              <div key={tech.name} className="rounded-2xl p-5 flex flex-col gap-3" style={GLASS}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-bold text-sm" style={{ color: '#f0fdf4' }}>{tech.name}</p>
+                    {tech.version && (
+                      <p className="text-xs mt-0.5" style={{ color: 'rgba(167,243,208,0.4)' }}>v{tech.version}</p>
+                    )}
+                  </div>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: cat.bg, color: cat.color }}>{tech.category}</span>
+                </div>
+                <div className="flex items-center gap-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(167,243,208,0.4)" strokeWidth="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+                  </svg>
+                  <span style={{ color: 'rgba(167,243,208,0.55)', fontSize: '0.75rem' }}>
+                    <strong style={{ color: '#34d399' }}>{tech.assets}</strong> assets
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

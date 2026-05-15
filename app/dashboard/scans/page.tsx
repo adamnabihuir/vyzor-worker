@@ -1,162 +1,363 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
-const COMPLETED_SCANS = [
-  { id: 'scan_001', name: 'Team scan', type: 'Balanced scan', targets: '2 of 2 targets scanned', result: 'issues', issues: 11, date: '14 May 2026 09:30' },
-  { id: 'scan_002', name: 'One-off scan', type: 'Balanced scan', targets: '1 of 1 target scanned', result: 'issues', issues: 4, date: '12 May 2026 16:16' },
-  { id: 'scan_003', name: 'Weekly scan', type: 'Quick scan', targets: '2 of 2 targets scanned', result: 'clean', issues: 0, date: '5 May 2026 02:00' },
+const GLASS: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.07)',
+  backdropFilter: 'blur(18px)',
+  WebkitBackdropFilter: 'blur(18px)',
+  border: '1px solid rgba(255,255,255,0.13)',
+  boxShadow: '0 4px 28px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)',
+};
+
+type RealScan = {
+  id: string;
+  domain: string;
+  status: 'queued' | 'running' | 'completed' | 'failed';
+  progress: number;
+  current_step: string;
+  findings: { severity: string }[];
+  stats: {
+    assetsDiscovered?: number;
+    portsScanned?: number;
+    vulnerabilities?: { critical: number; high: number; medium: number; low: number };
+    riskScore?: number;
+  };
+  created_at: string;
+  completed_at: string | null;
+};
+
+type DemoScan = {
+  id: string;
+  name: string;
+  type: string;
+  targets: string;
+  issues: number | null;
+  critical?: number;
+  clean?: boolean;
+  date: string;
+};
+
+const DEMO_SCANS: DemoScan[] = [
+  { id: 'scan_001', name: 'Full scan — acmecorp.com', type: 'Balanced', targets: '2 targets', issues: 11, date: '14 May 09:30' },
+  { id: 'scan_002', name: 'Quick scan — techstart.io', type: 'Quick', targets: '1 target', issues: 4, date: '12 May 16:16' },
+  { id: 'scan_003', name: 'Weekly scheduled scan', type: 'Balanced', targets: '4 targets', issues: 0, clean: true, date: '5 May 02:00' },
+  { id: 'scan_004', name: 'Emerging threat: Log4Shell', type: 'ETS', targets: 'All targets', issues: 2, critical: 2, date: '3 May 14:22' },
+  { id: 'scan_005', name: 'API surface scan', type: 'Balanced', targets: '1 target', issues: 7, date: '28 Apr 10:00' },
+  { id: 'scan_006', name: 'Monthly full scan', type: 'Balanced', targets: '4 targets', issues: 23, date: '1 Apr 02:00' },
 ];
 
 const SCHEDULED = [
-  { name: 'Weekly scan', cron: 'Repeats weekly', targets: 'All targets', next: '15 May 2026 02:00' },
+  { name: 'Weekly scan', cron: 'Repeats weekly', targets: 'All targets', next: '21 May 2026 02:00' },
+  { name: 'Monthly full scan', cron: 'Repeats monthly', targets: 'All targets', next: '1 Jun 2026 02:00' },
 ];
 
+const ETS_CHECKS = [
+  { cve: 'CVE-2021-44228', name: 'Log4Shell', date: '3 May 2026', result: '2 critical', critical: true },
+  { cve: 'CVE-2023-44487', name: 'HTTP/2 Rapid Reset', date: '15 Apr 2026', result: 'Clean', critical: false },
+  { cve: 'CVE-2024-3400', name: 'PAN-OS Command Injection', date: '10 Apr 2026', result: 'Clean', critical: false },
+];
+
+function totalIssues(scan: RealScan) {
+  const v = scan.stats?.vulnerabilities;
+  if (!v) return scan.findings?.length ?? 0;
+  return (v.critical ?? 0) + (v.high ?? 0) + (v.medium ?? 0) + (v.low ?? 0);
+}
+
+function fmtDate(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      onClick={onChange}
+      style={{
+        position: 'relative', width: '44px', height: '24px', borderRadius: '999px',
+        background: checked ? '#34d399' : 'rgba(255,255,255,0.15)', border: 'none',
+        cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s',
+      }}
+    >
+      <span
+        style={{
+          position: 'absolute', top: '3px', left: checked ? '23px' : '3px',
+          width: '18px', height: '18px', borderRadius: '50%', background: '#fff',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.3)', transition: 'left 0.2s', display: 'block',
+        }}
+      />
+    </button>
+  );
+}
+
+type Tab = 'team' | 'ets' | 'settings';
+
 export default function ScansPage() {
-  const [tab, setTab] = useState<'team' | 'ets' | 'settings'>('team');
+  const [tab, setTab] = useState<Tab>('team');
   const [etsDismissed, setEtsDismissed] = useState(false);
-  const [monitoringFeatures, setMonitoringFeatures] = useState({ ets: true, network: true, newService: false });
+  const [monitoring, setMonitoring] = useState({ ets: true, network: true, newService: false });
+  const [scanPriority, setScanPriority] = useState('balanced');
+  const [copied, setCopied] = useState(false);
+  const [realScans, setRealScans] = useState<RealScan[]>([]);
+  const [loadingScans, setLoadingScans] = useState(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const IPS = '18.98.162.96/29, 64.52.19.0/24, 18.168.180.128/25, 18.168.224.128/25';
+
+  const fetchScans = async () => {
+    try {
+      const res = await fetch('/api/scans');
+      if (res.ok) {
+        const data = await res.json();
+        setRealScans(data);
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setLoadingScans(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchScans();
+    intervalRef.current = setInterval(fetchScans, 5000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  const inProgressScans = realScans.filter(s => s.status === 'queued' || s.status === 'running');
+  const completedScans = realScans.filter(s => s.status === 'completed' || s.status === 'failed');
+  const hasRealCompleted = completedScans.length > 0;
+
+  // Stats
+  const totalScans = realScans.length > 0 ? realScans.length : 47;
+  const lastScan = realScans[0] ? fmtDate(realScans[0].created_at) : 'Today';
+
+  const copyIPs = () => {
+    navigator.clipboard.writeText(IPS).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   return (
-    <div className="p-8">
+    <div style={{ padding: '32px', minHeight: '100vh' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-black text-2xl" style={{ color: '#0f172a' }}>Scans</h1>
-        <div className="flex items-center gap-2">
-          <button className="text-sm font-bold px-4 py-2.5 rounded-xl flex items-center gap-2"
-            style={{ background: '#f1f5f9', color: '#475569' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+        <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#f0fdf4', margin: 0 }}>Scans</h1>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '9px 16px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(167,243,208,0.7)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
             Schedule scan
           </button>
-          <button className="btn-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl flex items-center gap-2">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '9px 16px', borderRadius: '10px', background: '#34d399', color: '#021a12', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer', textDecoration: 'none' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
             Scan now
-          </button>
+          </Link>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-0 mb-6" style={{ borderBottom: '1px solid #f1f5f9' }}>
+      {/* Stats strip */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '26px' }}>
         {[
-          { key: 'team', label: 'Team' },
-          { key: 'ets', label: 'Emerging threats' },
-          { key: 'settings', label: 'Settings' },
-        ].map((t: { key: string; label: string }) => (
-          <button key={t.key} onClick={() => setTab(t.key as typeof tab)}
-            className="px-4 py-2.5 text-sm font-semibold transition-all"
-            style={{
-              color: tab === t.key ? '#6366f1' : '#64748b',
-              borderBottom: tab === t.key ? '2px solid #6366f1' : '2px solid transparent',
-              marginBottom: '-1px',
-            }}>
+          { label: 'Total scans', value: String(totalScans), sub: 'All time' },
+          { label: 'In progress', value: String(inProgressScans.length), sub: inProgressScans.length === 1 ? '1 active' : `${inProgressScans.length} active` },
+          { label: 'Completed', value: String(completedScans.length || DEMO_SCANS.length), sub: 'Total results' },
+          { label: 'Last scan', value: realScans.length > 0 ? lastScan.split(' ').slice(0, 2).join(' ') : 'Today', sub: realScans.length > 0 ? lastScan.split(' ').slice(2).join(' ') : '09:30' },
+        ].map((s, i) => (
+          <div key={i} style={{ ...GLASS, borderRadius: '14px', padding: '16px 20px' }}>
+            <p style={{ fontSize: '0.75rem', color: 'rgba(167,243,208,0.55)', fontWeight: 500, marginBottom: '6px' }}>{s.label}</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f0fdf4', margin: 0, lineHeight: 1 }}>{s.value}</p>
+            <p style={{ fontSize: '0.7rem', color: 'rgba(167,243,208,0.4)', marginTop: '4px' }}>{s.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '22px' }}>
+        {([{ key: 'team', label: 'Team' }, { key: 'ets', label: 'Emerging Threats' }, { key: 'settings', label: 'Settings' }] as { key: Tab; label: string }[]).map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: '10px 18px', fontSize: '0.875rem', fontWeight: 600, color: tab === t.key ? '#34d399' : 'rgba(167,243,208,0.5)', background: 'none', border: 'none', borderBottom: tab === t.key ? '2px solid #34d399' : '2px solid transparent', marginBottom: '-1px', cursor: 'pointer' }}>
             {t.label}
           </button>
         ))}
       </div>
 
+      {/* ─── TEAM TAB ─── */}
       {tab === 'team' && (
-        <div className="flex gap-6">
-          {/* Main content */}
-          <div className="flex-1 min-w-0 space-y-6">
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
             {/* In Progress */}
-            <div className="card-glass rounded-2xl overflow-hidden">
-              <div className="px-6 py-4" style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <h2 className="font-bold text-sm" style={{ color: '#0f172a' }}>In progress</h2>
+            <div style={{ ...GLASS, borderRadius: '16px', overflow: 'hidden' }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: inProgressScans.length > 0 ? '#34d399' : 'rgba(167,243,208,0.3)', animation: inProgressScans.length > 0 ? 'pulse 2s infinite' : 'none' }} />
+                <h2 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#f0fdf4', margin: 0 }}>In Progress</h2>
+                {inProgressScans.length > 0 && (
+                  <span style={{ marginLeft: 'auto', fontSize: '0.72rem', fontWeight: 700, background: 'rgba(52,211,153,0.12)', color: '#34d399', padding: '2px 8px', borderRadius: '999px' }}>
+                    {inProgressScans.length} running
+                  </span>
+                )}
               </div>
-              <div className="px-6 py-5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8', flex: 1 }}>Scan</span>
+              {inProgressScans.length === 0 ? (
+                <div style={{ padding: '28px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '0.85rem', color: 'rgba(167,243,208,0.4)' }}>No scans currently running</p>
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8' }}>Progress</span>
-              </div>
-              <div className="px-6 py-8 text-center" style={{ borderTop: '1px solid #f8fafc' }}>
-                <p className="text-sm" style={{ color: '#94a3b8' }}>No items</p>
-              </div>
+              ) : (
+                inProgressScans.map((scan, i) => (
+                  <Link
+                    key={scan.id}
+                    href={`/dashboard/scans/${scan.id}`}
+                    style={{
+                      display: 'block', padding: '16px 20px', textDecoration: 'none',
+                      borderBottom: i < inProgressScans.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                      background: 'rgba(255,255,255,0.018)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div>
+                        <p style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f0fdf4', margin: 0 }}>{scan.domain}</p>
+                        <p style={{ fontSize: '0.72rem', color: 'rgba(167,243,208,0.5)', marginTop: '2px' }}>{scan.current_step}</p>
+                      </div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, background: scan.status === 'running' ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.08)', color: scan.status === 'running' ? '#34d399' : 'rgba(167,243,208,0.5)', padding: '3px 10px', borderRadius: '999px' }}>
+                        {scan.status === 'running' ? 'Running' : 'Queued'}
+                      </span>
+                    </div>
+                    <div style={{ height: '4px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${scan.progress}%`, background: 'linear-gradient(90deg, #34d399, #059669)', borderRadius: '999px', transition: 'width 0.5s ease' }} />
+                    </div>
+                    <p style={{ fontSize: '0.68rem', color: 'rgba(167,243,208,0.4)', marginTop: '5px', textAlign: 'right' }}>{scan.progress}%</p>
+                  </Link>
+                ))
+              )}
             </div>
 
             {/* Completed */}
-            <div className="card-glass rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <h2 className="font-bold text-sm" style={{ color: '#0f172a' }}>Completed</h2>
-              </div>
-              {/* Filters */}
-              <div className="px-6 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid #f8fafc', background: '#fafafa' }}>
-                <input type="text" placeholder="Search" className="scan-input rounded-lg px-3 py-1.5 text-xs" style={{ width: '160px' }} />
-                <select className="scan-input rounded-lg px-3 py-1.5 text-xs" style={{ color: '#475569' }}>
-                  <option>Scan type</option><option>Balanced scan</option><option>Quick scan</option>
-                </select>
-                <select className="scan-input rounded-lg px-3 py-1.5 text-xs" style={{ color: '#475569' }}>
-                  <option>Result</option><option>Issues found</option><option>Clean</option>
-                </select>
-                <input type="date" className="scan-input rounded-lg px-3 py-1.5 text-xs" placeholder="From" />
-                <input type="date" className="scan-input rounded-lg px-3 py-1.5 text-xs" placeholder="To" />
+            <div style={{ ...GLASS, borderRadius: '16px', overflow: 'hidden' }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h2 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#f0fdf4', margin: 0 }}>Completed</h2>
+                <span style={{ fontSize: '0.75rem', color: 'rgba(167,243,208,0.4)' }}>
+                  {hasRealCompleted ? `${completedScans.length} scan${completedScans.length !== 1 ? 's' : ''}` : `${DEMO_SCANS.length} scans`}
+                </span>
               </div>
 
               {/* Table header */}
-              <div className="px-6 py-3 flex items-center gap-4" style={{ borderBottom: '1px solid #f8fafc', background: '#fafafa' }}>
-                <span className="text-xs font-bold uppercase tracking-wide flex-1" style={{ color: '#94a3b8' }}>Scan</span>
-                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8', width: '120px' }}>Result</span>
+              <div style={{ display: 'grid', gridTemplateColumns: hasRealCompleted ? '2fr 80px 80px 80px 130px 80px' : '2.5fr 100px 80px 80px 120px 80px', padding: '10px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.04)' }}>
+                {(hasRealCompleted ? ['Domain', 'Status', 'Subdomains', 'Issues', 'Date', ''] : ['Scan', 'Type', 'Targets', 'Issues', 'Date', '']).map(h => (
+                  <span key={h} style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(167,243,208,0.4)' }}>{h}</span>
+                ))}
               </div>
 
-              {COMPLETED_SCANS.map((scan, i) => (
-                <div key={scan.id} className="px-6 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors"
-                  style={{ borderBottom: i < COMPLETED_SCANS.length - 1 ? '1px solid #f8fafc' : 'none' }}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                      <Link href={`/dashboard/scans/${scan.id}`} className="text-sm font-semibold hover:underline" style={{ color: '#0f172a' }}>
-                        {scan.name}
-                      </Link>
+              {/* Real scans */}
+              {hasRealCompleted && completedScans.map((scan, i) => {
+                const issues = totalIssues(scan);
+                const critCount = scan.stats?.vulnerabilities?.critical ?? 0;
+                const subdomains = scan.stats?.assetsDiscovered ?? 0;
+                return (
+                  <div
+                    key={scan.id}
+                    style={{ display: 'grid', gridTemplateColumns: '2fr 80px 80px 80px 130px 80px', padding: '14px 20px', borderBottom: i < completedScans.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', alignItems: 'center', background: 'rgba(255,255,255,0.018)', transition: 'background 0.12s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.04)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.018)'; }}
+                  >
+                    <p style={{ fontSize: '0.86rem', fontWeight: 600, color: '#f0fdf4', margin: 0 }}>{scan.domain}</p>
+
+                    <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '3px 8px', borderRadius: '999px', background: scan.status === 'completed' ? 'rgba(52,211,153,0.1)' : 'rgba(239,68,68,0.1)', color: scan.status === 'completed' ? '#34d399' : '#ef4444', display: 'inline-block' }}>
+                      {scan.status === 'completed' ? 'Done' : 'Failed'}
+                    </span>
+
+                    <span style={{ fontSize: '0.8rem', color: 'rgba(167,243,208,0.6)' }}>{subdomains}</span>
+
+                    <span>
+                      {issues === 0 ? (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                          Clean
+                        </span>
+                      ) : critCount > 0 ? (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444' }}>{critCount} critical</span>
+                      ) : (
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f0fdf4' }}>{issues}</span>
+                      )}
+                    </span>
+
+                    <span style={{ fontSize: '0.75rem', color: 'rgba(167,243,208,0.5)' }}>{fmtDate(scan.created_at)}</span>
+
+                    <Link href={`/dashboard/scans/${scan.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(167,243,208,0.7)', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none' }}>
+                      View
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
+                    </Link>
+                  </div>
+                );
+              })}
+
+              {/* Demo scans (shown when no real scans yet) */}
+              {!hasRealCompleted && (
+                <>
+                  {loadingScans ? (
+                    <div style={{ padding: '28px', textAlign: 'center' }}>
+                      <p style={{ fontSize: '0.85rem', color: 'rgba(167,243,208,0.4)' }}>Loading scans…</p>
                     </div>
-                    <p className="text-xs" style={{ color: '#94a3b8' }}>
-                      <span className="font-medium" style={{ color: '#6366f1' }}>{scan.type}</span> · {scan.targets} · {scan.date}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2" style={{ width: '120px' }}>
-                    {scan.result === 'issues' ? (
-                      <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#f59e0b' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        {scan.issues} issues found
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#22c55e' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
-                        Clean
-                      </span>
-                    )}
-                    <button style={{ color: '#94a3b8', marginLeft: 'auto' }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
+                  ) : (
+                    DEMO_SCANS.map((scan, i) => (
+                      <div
+                        key={scan.id}
+                        style={{ display: 'grid', gridTemplateColumns: '2.5fr 100px 80px 80px 120px 80px', padding: '14px 20px', borderBottom: i < DEMO_SCANS.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', alignItems: 'center', background: 'rgba(255,255,255,0.018)', transition: 'background 0.12s' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.04)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.018)'; }}
+                      >
+                        <p style={{ fontSize: '0.86rem', fontWeight: 600, color: '#f0fdf4', margin: 0 }}>{scan.name}</p>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '3px 8px', borderRadius: '999px', background: scan.type === 'ETS' ? 'rgba(167,139,250,0.15)' : scan.type === 'Quick' ? 'rgba(59,130,246,0.12)' : 'rgba(52,211,153,0.1)', color: scan.type === 'ETS' ? '#a78bfa' : scan.type === 'Quick' ? '#3b82f6' : '#34d399', display: 'inline-block' }}>
+                          {scan.type}
+                        </span>
+                        <span style={{ fontSize: '0.8rem', color: 'rgba(167,243,208,0.6)' }}>{scan.targets}</span>
+                        <span>
+                          {scan.clean ? (
+                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                              Clean
+                            </span>
+                          ) : scan.critical ? (
+                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444' }}>{scan.critical} critical</span>
+                          ) : (
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f0fdf4' }}>{scan.issues}</span>
+                          )}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: 'rgba(167,243,208,0.5)' }}>{scan.date}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(167,243,208,0.3)', fontSize: '0.75rem', fontWeight: 600 }}>Demo</span>
+                      </div>
+                    ))
+                  )}
+                </>
+              )}
             </div>
           </div>
 
-          {/* Scheduled sidebar */}
-          <div style={{ width: '280px', flexShrink: 0 }}>
-            <div className="card-glass rounded-2xl overflow-hidden">
-              <div className="px-5 py-4" style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <h2 className="font-bold text-sm" style={{ color: '#0f172a' }}>Scheduled</h2>
+          {/* Sidebar */}
+          <div style={{ width: '260px', flexShrink: 0 }}>
+            <div style={{ ...GLASS, borderRadius: '16px', overflow: 'hidden' }}>
+              <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h2 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#f0fdf4', margin: 0 }}>Scheduled</h2>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, background: 'rgba(52,211,153,0.12)', color: '#34d399', padding: '2px 8px', borderRadius: '999px' }}>{SCHEDULED.length}</span>
               </div>
               {SCHEDULED.map((s, i) => (
-                <div key={i} className="px-5 py-4">
-                  <div className="flex items-start justify-between">
+                <div key={i} style={{ padding: '14px 18px', borderBottom: i < SCHEDULED.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        <span className="text-xs" style={{ color: '#94a3b8' }}>{s.next}</span>
-                      </div>
-                      <p className="font-semibold text-sm mb-1" style={{ color: '#0f172a' }}>{s.name}</p>
-                      <div className="flex items-center gap-1">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-                        <span className="text-xs" style={{ color: '#94a3b8' }}>{s.cron}</span>
-                        <span className="text-xs" style={{ color: '#94a3b8' }}>· {s.targets}</span>
-                      </div>
+                      <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f0fdf4', margin: '0 0 3px' }}>{s.name}</p>
+                      <p style={{ fontSize: '0.72rem', color: 'rgba(167,243,208,0.5)', margin: '0 0 2px' }}>{s.cron} · {s.targets}</p>
+                      <p style={{ fontSize: '0.7rem', color: 'rgba(167,243,208,0.4)', margin: 0 }}>Next: {s.next}</p>
                     </div>
-                    <button style={{ color: '#94a3b8' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(167,243,208,0.4)', padding: '2px', flexShrink: 0 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg>
                     </button>
                   </div>
                 </div>
@@ -166,83 +367,93 @@ export default function ScansPage() {
         </div>
       )}
 
+      {/* ─── EMERGING THREATS TAB ─── */}
       {tab === 'ets' && (
         <div>
           {!etsDismissed && (
-            <div className="flex items-start gap-3 px-5 py-4 rounded-xl mb-6 text-sm"
-              style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" className="flex-shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <div className="flex-1">
-                <p className="font-semibold mb-0.5" style={{ color: '#0f172a' }}>What is an Emerging Threat Scan (ETS)?</p>
-                <p style={{ color: '#475569' }}>When Vyzor discovers a new threat, we'll automatically scan all your licensed targets.</p>
-                <span className="text-xs font-semibold" style={{ color: '#6366f1', cursor: 'pointer' }}>Learn more about ETS</span>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', padding: '16px 20px', borderRadius: '14px', background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)', marginBottom: '20px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" style={{ flexShrink: 0, marginTop: '1px' }}><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: 700, fontSize: '0.875rem', color: '#f0fdf4', marginBottom: '4px' }}>Emerging Threat Scans (ETS)</p>
+                <p style={{ fontSize: '0.82rem', color: 'rgba(167,243,208,0.55)', lineHeight: 1.6 }}>
+                  When Vyzor discovers a new critical threat, we automatically scan all your licensed targets within hours — before attackers can exploit them. ETS checks run silently in the background and only notify you if a threat is detected.
+                </p>
               </div>
-              <button onClick={() => setEtsDismissed(true)} style={{ color: '#94a3b8', flexShrink: 0 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <button onClick={() => setEtsDismissed(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(167,243,208,0.4)', flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>
             </div>
           )}
-          <div className="card-glass rounded-2xl p-16 text-center">
-            <div className="text-5xl mb-4">🛡️</div>
-            <p className="font-bold text-base mb-2" style={{ color: '#0f172a' }}>No new vulnerabilities</p>
-            <p className="text-sm mb-4" style={{ color: '#94a3b8', maxWidth: '400px', margin: '0 auto 16px' }}>
-              As soon as we identify a new vulnerability that could critically affect your systems, we'll automatically scan all your external targets.
-            </p>
-            <span className="text-xs font-semibold" style={{ color: '#6366f1', cursor: 'pointer' }}>Learn more about ETS</span>
+          <div style={{ ...GLASS, borderRadius: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <h2 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#f0fdf4', margin: 0 }}>Recent ETS checks</h2>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '160px 1.5fr 1fr 1fr', padding: '10px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.04)' }}>
+              {['CVE', 'Vulnerability', 'Date', 'Result'].map(h => (
+                <span key={h} style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(167,243,208,0.4)' }}>{h}</span>
+              ))}
+            </div>
+            {ETS_CHECKS.map((c, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '160px 1.5fr 1fr 1fr', padding: '14px 20px', borderBottom: i < ETS_CHECKS.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, fontFamily: 'monospace', color: '#a78bfa', background: 'rgba(167,139,250,0.1)', padding: '3px 9px', borderRadius: '6px', display: 'inline-block' }}>{c.cve}</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#f0fdf4' }}>{c.name}</span>
+                <span style={{ fontSize: '0.8rem', color: 'rgba(167,243,208,0.55)' }}>{c.date}</span>
+                <span>
+                  {c.critical ? (
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444', background: 'rgba(239,68,68,0.12)', padding: '3px 10px', borderRadius: '999px', border: '1px solid rgba(239,68,68,0.2)' }}>{c.result}</span>
+                  ) : (
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                      Clean
+                    </span>
+                  )}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
+      {/* ─── SETTINGS TAB ─── */}
       {tab === 'settings' && (
-        <div className="max-w-2xl space-y-6">
-          {/* Monitoring features */}
-          <div className="card-glass rounded-2xl overflow-hidden">
-            <div className="px-6 py-5" style={{ borderBottom: '1px solid #f1f5f9' }}>
-              <h2 className="font-bold text-sm" style={{ color: '#0f172a' }}>Monitoring features</h2>
-              <p className="text-xs mt-1" style={{ color: '#94a3b8' }}>Automatic scans that keep your targets monitored</p>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="w-2 h-2 rounded-full" style={{ background: '#22c55e' }} />
-                <span className="text-xs font-semibold" style={{ color: '#22c55e' }}>2/2 monitoring features enabled</span>
+        <div style={{ maxWidth: '680px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div style={{ ...GLASS, borderRadius: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 22px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <h2 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f0fdf4', margin: 0 }}>Monitoring features</h2>
+              <p style={{ fontSize: '0.78rem', color: 'rgba(167,243,208,0.55)', marginTop: '4px' }}>Automatic scans that keep your targets monitored 24/7</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginTop: '8px' }}>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#34d399' }} />
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#34d399' }}>{Object.values(monitoring).filter(Boolean).length}/3 features enabled</span>
               </div>
             </div>
-            <div className="px-6 py-5 space-y-4">
+            <div style={{ padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {[
-                { key: 'ets', icon: '⚡', label: 'Emerging threat scans', desc: 'Automatically scan all targets for newly discovered threats' },
-                { key: 'network', icon: '🖥️', label: 'Network scans', desc: 'Network scanning is recommended and essential for Smart Recon to function' },
-                { key: 'newService', icon: '🔍', label: 'New service scans', desc: 'Automated scans when new services are detected. Changes to existing services will not trigger this' },
+                { key: 'ets' as keyof typeof monitoring, label: 'Emerging threat scans', desc: 'Auto-scan all targets when a new critical CVE is discovered', icon: '⚡' },
+                { key: 'network' as keyof typeof monitoring, label: 'Network scans', desc: 'Continuous network scanning — required for Smart Recon to function', icon: '🌐' },
+                { key: 'newService' as keyof typeof monitoring, label: 'New service scans', desc: 'Trigger a scan automatically when a new service is detected on a target', icon: '🔍' },
               ].map(feat => (
-                <div key={feat.key} className="flex items-start justify-between gap-4 p-4 rounded-xl"
-                  style={{ background: monitoringFeatures[feat.key as keyof typeof monitoringFeatures] ? 'rgba(99,102,241,0.04)' : '#fafafa', border: '1px solid #f1f5f9' }}>
-                  <div className="flex items-start gap-3">
-                    <span className="text-lg">{feat.icon}</span>
-                    <div>
-                      <p className="text-sm font-semibold" style={{ color: '#0f172a' }}>{feat.label}</p>
-                      <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>{feat.desc}</p>
-                    </div>
+                <div key={feat.key} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', borderRadius: '12px', background: monitoring[feat.key] ? 'rgba(52,211,153,0.06)' : 'rgba(255,255,255,0.04)', border: `1px solid ${monitoring[feat.key] ? 'rgba(52,211,153,0.15)' : 'rgba(255,255,255,0.08)'}` }}>
+                  <span style={{ fontSize: '1.2rem' }}>{feat.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#f0fdf4', margin: 0 }}>{feat.label}</p>
+                    <p style={{ fontSize: '0.75rem', color: 'rgba(167,243,208,0.5)', marginTop: '3px' }}>{feat.desc}</p>
                   </div>
-                  <button
-                    onClick={() => setMonitoringFeatures(p => ({ ...p, [feat.key]: !p[feat.key as keyof typeof p] }))}
-                    className="relative flex-shrink-0 w-11 h-6 rounded-full transition-all"
-                    style={{ background: monitoringFeatures[feat.key as keyof typeof monitoringFeatures] ? '#6366f1' : '#e2e8f0' }}>
-                    <span className="absolute top-1 transition-all w-4 h-4 rounded-full bg-white shadow"
-                      style={{ left: monitoringFeatures[feat.key as keyof typeof monitoringFeatures] ? '24px' : '4px' }} />
-                  </button>
+                  <Toggle checked={monitoring[feat.key]} onChange={() => setMonitoring(p => ({ ...p, [feat.key]: !p[feat.key] }))} />
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Scanner access */}
-          <div className="card-glass rounded-2xl overflow-hidden">
-            <div className="px-6 py-5" style={{ borderBottom: '1px solid #f1f5f9' }}>
-              <h2 className="font-bold text-sm" style={{ color: '#0f172a' }}>Scanner access</h2>
-              <p className="text-xs mt-1" style={{ color: '#94a3b8' }}>Ensure Vyzor's scanners can reach all your targets</p>
+          <div style={{ ...GLASS, borderRadius: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 22px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <h2 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f0fdf4', margin: 0 }}>Scanner access</h2>
+              <p style={{ fontSize: '0.78rem', color: 'rgba(167,243,208,0.55)', marginTop: '4px' }}>Ensure Vyzor's scanners can reach all your targets</p>
             </div>
-            <div className="px-6 py-5 space-y-5">
+            <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
-                <label className="block text-sm font-semibold mb-2" style={{ color: '#374151' }}>Scan region</label>
-                <p className="text-xs mb-2" style={{ color: '#94a3b8' }}>Select a region close to your targets for faster scans</p>
-                <select className="scan-input w-full rounded-xl px-4 py-3 text-sm" style={{ color: '#475569' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'rgba(167,243,208,0.7)', marginBottom: '6px' }}>Scan region</label>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(167,243,208,0.4)', marginBottom: '8px' }}>Choose the region closest to your targets for faster scan times</p>
+                <select style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: '#f0fdf4', fontSize: '0.875rem', outline: 'none' }}>
                   <option>Europe (London)</option>
                   <option>US East (Virginia)</option>
                   <option>US West (Oregon)</option>
@@ -250,35 +461,37 @@ export default function ScansPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2" style={{ color: '#374151' }}>Allowlist IPs</label>
-                <p className="text-xs mb-2" style={{ color: '#94a3b8' }}>Add these IPs to your firewall or WAF allowlist</p>
-                <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '0.75rem', color: '#475569' }}>
-                  <span className="flex-1">18.98.162.96/29, 64.52.19.0/24, 18.168.180.128/25, 18.168.224.128/25</span>
-                  <button style={{ color: '#6366f1' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'rgba(167,243,208,0.7)', marginBottom: '6px' }}>Allowlist IPs</label>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(167,243,208,0.4)', marginBottom: '8px' }}>Add these IPs to your firewall or WAF allowlist to allow scanner traffic</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <span style={{ flex: 1, fontSize: '0.75rem', fontFamily: 'monospace', color: 'rgba(167,243,208,0.7)', wordBreak: 'break-all' }}>{IPS}</span>
+                  <button onClick={copyIPs} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', borderRadius: '7px', background: copied ? 'rgba(52,211,153,0.15)' : 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: copied ? '#34d399' : 'rgba(167,243,208,0.7)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+                    {copied ? (
+                      <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>Copied</>
+                    ) : (
+                      <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>Copy</>
+                    )}
                   </button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Scan prioritisation */}
-          <div className="card-glass rounded-2xl overflow-hidden">
-            <div className="px-6 py-5" style={{ borderBottom: '1px solid #f1f5f9' }}>
-              <h2 className="font-bold text-sm" style={{ color: '#0f172a' }}>Scan prioritisation</h2>
-              <p className="text-xs mt-1" style={{ color: '#94a3b8' }}>Prioritise scan speed or depth</p>
+          <div style={{ ...GLASS, borderRadius: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 22px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <h2 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#f0fdf4', margin: 0 }}>Scan priority</h2>
+              <p style={{ fontSize: '0.78rem', color: 'rgba(167,243,208,0.55)', marginTop: '4px' }}>Prioritise scan speed or detection depth</p>
             </div>
-            <div className="px-6 py-5 space-y-3">
+            <div style={{ padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[
-                { value: 'balanced', label: 'Balanced scans (recommended)', desc: 'Strike the balance between scan time and detecting more vulnerabilities' },
-                { value: 'quick', label: 'Quick scans', desc: 'Shorter scan time but may not find all vulnerabilities' },
+                { value: 'balanced', label: 'Balanced (recommended)', desc: 'Best balance of scan time and vulnerability detection coverage' },
+                { value: 'quick', label: 'Quick scans', desc: 'Shorter scan time — may not detect all vulnerabilities' },
               ].map(opt => (
-                <label key={opt.value} className="flex items-start gap-3 p-4 rounded-xl cursor-pointer"
-                  style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                  <input type="radio" name="priority" defaultChecked={opt.value === 'balanced'} className="mt-0.5" />
+                <label key={opt.value} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px 16px', borderRadius: '12px', background: scanPriority === opt.value ? 'rgba(52,211,153,0.07)' : 'rgba(255,255,255,0.04)', border: `1px solid ${scanPriority === opt.value ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.08)'}`, cursor: 'pointer' }}>
+                  <input type="radio" name="scanPriority" value={opt.value} checked={scanPriority === opt.value} onChange={() => setScanPriority(opt.value)} style={{ accentColor: '#34d399', marginTop: '2px' }} />
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: '#0f172a' }}>{opt.label}</p>
-                    <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>{opt.desc}</p>
+                    <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#f0fdf4', margin: 0 }}>{opt.label}</p>
+                    <p style={{ fontSize: '0.75rem', color: 'rgba(167,243,208,0.5)', marginTop: '3px' }}>{opt.desc}</p>
                   </div>
                 </label>
               ))}
@@ -286,6 +499,13 @@ export default function ScansPage() {
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -13,8 +13,8 @@ const NAV = [
   { label: 'Issues', href: '/dashboard/vulnerabilities', icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m12 22 4-4H8l4 4Z"/><circle cx="12" cy="12" r="3"/></svg>, badge: 11, badgeColor: '#ef4444' },
   { label: 'Reports', href: '/dashboard/reports', icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
   { label: 'Attack surface', href: '/dashboard/attack-surface', icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
-  { label: 'Pentests', href: '/dashboard/pentests', icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m14.5 2-8.5 8.5 1.5 1.5 8.5-8.5-1.5-1.5z"/><path d="m7 14-5 5"/><path d="m15.5 4.5 4 4"/></svg>, badge: 'Beta', badgeColor: '#6366f1' },
-  { label: 'VyzorAI', href: '/dashboard/ai', icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>, badge: 'AI', badgeColor: '#8b5cf6' },
+  { label: 'Pentests', href: '/dashboard/pentests', icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m14.5 2-8.5 8.5 1.5 1.5 8.5-8.5-1.5-1.5z"/><path d="m7 14-5 5"/><path d="m15.5 4.5 4 4"/></svg>, badge: 'Beta', badgeColor: '#a78bfa' },
+  { label: 'VyzorAI', href: '/dashboard/ai', icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>, badge: 'AI', badgeColor: '#34d399' },
 ];
 
 const BOTTOM_NAV = [
@@ -27,15 +27,18 @@ function NavItem({ item, active }: { item: typeof NAV[0]; active: boolean }) {
   return (
     <Link href={item.href}
       className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150"
-      style={{ background: active ? 'rgba(99,102,241,0.08)' : 'transparent', color: active ? '#6366f1' : '#64748b' }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#f8fafc'; }}
+      style={{
+        background: active ? 'rgba(52,211,153,0.12)' : 'transparent',
+        color: active ? '#34d399' : 'rgba(167,243,208,0.55)',
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(52,211,153,0.06)'; }}
       onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
     >
-      <span style={{ opacity: active ? 1 : 0.65, flexShrink: 0 }}>{item.icon}</span>
+      <span style={{ opacity: active ? 1 : 0.7, flexShrink: 0 }}>{item.icon}</span>
       <span className="flex-1">{item.label}</span>
       {item.badge && (
         <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
-          style={{ background: `${item.badgeColor}15`, color: item.badgeColor }}>
+          style={{ background: `${item.badgeColor}20`, color: item.badgeColor }}>
           {item.badge}
         </span>
       )}
@@ -59,37 +62,30 @@ export default function Sidebar() {
   const displayEmail = user?.emailAddresses?.[0]?.emailAddress ?? '';
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-56 flex flex-col z-40"
-      style={{ background: '#ffffff', borderRight: '1px solid #f1f5f9' }}>
-      {/* Logo */}
-      <div className="px-4 py-4" style={{ borderBottom: '1px solid #f1f5f9' }}>
-        <Logo size={26} markColor="#021a12" textColor="#0f172a" />
+    <aside className="fixed left-0 top-0 h-full w-60 flex flex-col z-40"
+      style={{ background: '#031e15', borderRight: '1px solid rgba(16,185,129,0.12)' }}>
+      <div className="px-4 py-4" style={{ borderBottom: '1px solid rgba(16,185,129,0.1)' }}>
+        <Logo size={26} />
       </div>
-
-      {/* Main nav */}
       <nav className="flex-1 px-2.5 py-3 space-y-0.5 overflow-y-auto">
         {NAV.map(item => <NavItem key={item.href} item={item} active={isActive(item.href)} />)}
       </nav>
-
-      {/* Bottom nav */}
-      <div className="px-2.5 py-3 space-y-0.5" style={{ borderTop: '1px solid #f1f5f9' }}>
+      <div className="px-2.5 py-3 space-y-0.5" style={{ borderTop: '1px solid rgba(16,185,129,0.1)' }}>
         {BOTTOM_NAV.map(item => <NavItem key={item.href} item={item} active={isActive(item.href)} />)}
-
-        {/* User row */}
-        <div className="flex items-center gap-2.5 px-3 py-2.5 mt-1 rounded-xl" style={{ background: '#f8fafc' }}>
+        <div className="flex items-center gap-2.5 px-3 py-2.5 mt-1 rounded-xl"
+          style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.1)' }}>
           <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0"
             style={{ background: 'linear-gradient(135deg,#34d399,#059669)', color: '#021a12' }}>
             {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold truncate" style={{ color: '#0f172a' }}>{displayName}</p>
-            <p className="text-xs truncate" style={{ color: '#94a3b8' }}>{displayEmail}</p>
+            <p className="text-xs font-semibold truncate" style={{ color: '#f0fdf4' }}>{displayName}</p>
+            <p className="text-xs truncate" style={{ color: 'rgba(167,243,208,0.45)' }}>{displayEmail}</p>
           </div>
-          <button
-            onClick={() => signOut(() => router.push('/auth/login'))}
-            style={{ color: '#94a3b8' }}
+          <button onClick={() => signOut(() => router.push('/auth/login'))}
+            style={{ color: 'rgba(167,243,208,0.4)' }}
             onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-            onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}>
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(167,243,208,0.4)'}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
             </svg>

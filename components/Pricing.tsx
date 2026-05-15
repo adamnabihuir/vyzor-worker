@@ -202,7 +202,7 @@ export default function Pricing() {
 
           {/* Monthly / Annual toggle */}
           <div className="inline-flex items-center p-1 rounded-full"
-            style={{ background: 'rgba(4,54,34,0.6)', border: '1px solid rgba(52,211,153,0.15)' }}>
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}>
             <button onClick={() => setAnnual(false)}
               className="px-5 py-2 rounded-full text-sm font-semibold transition-all"
               style={{
@@ -228,8 +228,8 @@ export default function Pricing() {
         </div>
 
         {/* ── Global infrastructure slider ── */}
-        <div className="mx-auto mb-10 rounded-2xl p-6 md:p-8 card-dark"
-          style={{ maxWidth: '700px' }}>
+        <div className="mx-auto mb-10 rounded-2xl p-6 md:p-8"
+          style={{ maxWidth: '700px', background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(255,255,255,0.13)', boxShadow: '0 4px 28px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)' }}>
           <div className="flex items-center justify-between mb-5">
             <div>
               <p className="font-bold text-sm mb-0.5" style={{ color: 'var(--text-pri)' }}>
@@ -270,9 +270,14 @@ export default function Pricing() {
             const isEnterprise = plan.basePrice === null;
             const extra = plan.includedTargets !== null ? Math.max(0, targets - plan.includedTargets) : 0;
 
+            const glassStyle = plan.popular
+              ? { background: 'rgba(52,211,153,0.09)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1.5px solid rgba(52,211,153,0.35)', boxShadow: '0 0 40px rgba(52,211,153,0.12), 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.09)' }
+              : { background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(255,255,255,0.13)', boxShadow: '0 4px 28px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)' };
+
             return (
               <div key={plan.id}
-                className={`rounded-2xl flex flex-col relative ${plan.popular ? 'pricing-popular' : 'card-dark'}`}>
+                className="rounded-2xl flex flex-col relative"
+                style={glassStyle}>
 
                 {plan.popular && (
                   <div className="absolute -top-3.5 left-0 right-0 flex justify-center">

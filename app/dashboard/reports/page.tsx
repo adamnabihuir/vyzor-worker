@@ -2,253 +2,346 @@
 
 import { useState } from 'react';
 
-function MetricCard({ title, value, sub, color, chart }: { title: string; value: string | number; sub?: string; color?: string; chart?: React.ReactNode }) {
+const GLASS: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.07)',
+  backdropFilter: 'blur(18px)',
+  WebkitBackdropFilter: 'blur(18px)',
+  border: '1px solid rgba(255,255,255,0.13)',
+  boxShadow: '0 4px 28px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)',
+};
+
+const C = {
+  text: '#f0fdf4',
+  muted: 'rgba(167,243,208,0.55)',
+  veryMuted: 'rgba(167,243,208,0.4)',
+  accent: '#34d399',
+  bg: '#021a12',
+  rowBg: 'rgba(255,255,255,0.04)',
+  innerBorder: 'rgba(255,255,255,0.08)',
+};
+
+/* ── Data ──────────────────────────────────────────────── */
+const REPORTS = [
+  {
+    id: 1,
+    name: 'Full Security Report — acmecorp.com',
+    target: 'acmecorp.com',
+    date: '14 May 2025',
+    type: 'Full Security',
+    findings: { critical: 3, high: 8 },
+    format: 'PDF',
+  },
+  {
+    id: 2,
+    name: 'Executive Summary Q2 2025',
+    target: 'acmecorp.com',
+    date: '10 May 2025',
+    type: 'Executive Summary',
+    findings: { critical: 0, high: 2 },
+    format: 'PDF',
+  },
+  {
+    id: 3,
+    name: 'Weekly Scan Report',
+    target: 'All targets',
+    date: '7 May 2025',
+    type: 'Full Security',
+    findings: { critical: 1, high: 3 },
+    format: 'CSV',
+  },
+  {
+    id: 4,
+    name: 'Compliance Report — NIS2',
+    target: 'acmecorp.com',
+    date: '1 May 2025',
+    type: 'Compliance',
+    findings: { critical: 0, high: 1 },
+    format: 'PDF',
+  },
+  {
+    id: 5,
+    name: 'Full Security Report — techstart.io',
+    target: 'techstart.io',
+    date: '28 Apr 2025',
+    type: 'Full Security',
+    findings: { critical: 2, high: 5 },
+    format: 'PDF',
+  },
+  {
+    id: 6,
+    name: 'Pentest Summary',
+    target: 'All targets',
+    date: '15 Apr 2025',
+    type: 'Executive Summary',
+    findings: { critical: 1, high: 2 },
+    format: 'PDF',
+  },
+];
+
+/* ── Stat card ─────────────────────────────────────────── */
+function StatCard({ title, value, sub }: { title: string; value: string | number; sub?: string }) {
   return (
-    <div className="card-glass rounded-2xl p-5">
-      <div className="flex items-start justify-between mb-3">
-        <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8' }}>{title}</p>
-        <button style={{ color: '#94a3b8' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </button>
-      </div>
-      <p className="font-black text-3xl mb-1" style={{ color: color ?? '#0f172a' }}>{value}</p>
-      {sub && <p className="text-xs" style={{ color: '#94a3b8' }}>{sub}</p>}
-      {chart}
+    <div className="rounded-2xl p-5" style={GLASS}>
+      <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: C.muted }}>{title}</p>
+      <p className="font-black text-3xl" style={{ color: C.text }}>{value}</p>
+      {sub && <p className="text-xs mt-1" style={{ color: C.muted }}>{sub}</p>}
     </div>
   );
 }
 
-function MiniBar({ label, count, color }: { label: string; count: number; color: string }) {
+/* ── Report icon ───────────────────────────────────────── */
+function ReportIcon({ type }: { type: string }) {
+  const color = type === 'Compliance' ? '#a78bfa' : type === 'Executive Summary' ? '#0ea5e9' : C.accent;
   return (
-    <div className="flex items-center justify-between py-1">
-      <span className="text-xs font-semibold w-16" style={{ color }}>{label}</span>
-      <div className="flex-1 mx-3 h-1.5 rounded-full" style={{ background: '#f1f5f9' }}>
-        <div className="h-1.5 rounded-full" style={{ background: color, width: count > 0 ? `${Math.max(count * 15, 4)}%` : '0%' }} />
-      </div>
-      <span className="text-xs font-bold w-6 text-right" style={{ color: '#64748b' }}>{count}</span>
+    <div
+      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+      style={{ background: `${color}18`, border: `1px solid ${color}30` }}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
     </div>
   );
 }
 
+/* ── Format badge ──────────────────────────────────────── */
+function FormatBadge({ fmt }: { fmt: string }) {
+  const isPdf = fmt === 'PDF';
+  return (
+    <span
+      className="text-xs font-bold px-2 py-0.5 rounded"
+      style={{
+        background: isPdf ? 'rgba(239,68,68,0.12)' : 'rgba(52,211,153,0.1)',
+        color: isPdf ? '#f87171' : C.accent,
+      }}
+    >
+      {fmt}
+    </span>
+  );
+}
+
+/* ── Generate modal ────────────────────────────────────── */
+function GenerateModal({ onClose }: { onClose: () => void }) {
+  const [target, setTarget] = useState('All targets');
+  const [reportType, setReportType] = useState('Full security report');
+  const [format, setFormat] = useState('PDF');
+  const [range, setRange] = useState('Last 30 days');
+
+  const sel: React.CSSProperties = {
+    width: '100%', padding: '10px 14px', borderRadius: 10,
+    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+    color: C.text, fontSize: 14, outline: 'none',
+  };
+
+  return (
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50"
+      style={{ background: 'rgba(2,26,18,0.88)', backdropFilter: 'blur(6px)' }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="rounded-2xl p-6 w-full max-w-md" style={GLASS}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-bold text-base" style={{ color: C.text }}>Generate report</h3>
+          <button onClick={onClose} style={{ color: C.muted }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: C.muted }}>Target</label>
+            <select value={target} onChange={e => setTarget(e.target.value)} style={sel}>
+              <option>All targets</option>
+              <option>acmecorp.com</option>
+              <option>techstart.io</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: C.muted }}>Report type</label>
+            <select value={reportType} onChange={e => setReportType(e.target.value)} style={sel}>
+              <option>Full security report</option>
+              <option>Executive summary</option>
+              <option>Compliance report</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: C.muted }}>Format</label>
+            <div className="flex gap-2">
+              {['PDF', 'CSV'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFormat(f)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                  style={{
+                    background: format === f ? C.accent : 'rgba(255,255,255,0.06)',
+                    color: format === f ? '#021a12' : C.muted,
+                    border: format === f ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                  }}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: C.muted }}>Date range</label>
+            <select value={range} onChange={e => setRange(e.target.value)} style={sel}>
+              <option>Last 7 days</option>
+              <option>Last 30 days</option>
+              <option>Last 90 days</option>
+              <option>Custom</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            className="flex-1 text-sm font-bold py-2.5 rounded-xl"
+            style={{ background: C.accent, color: '#021a12' }}
+            onClick={onClose}
+          >
+            Generate
+          </button>
+          <button
+            className="flex-1 text-sm font-bold py-2.5 rounded-xl"
+            style={{ background: 'rgba(255,255,255,0.06)', color: C.muted, border: '1px solid rgba(255,255,255,0.1)' }}
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Page ──────────────────────────────────────────────── */
 export default function ReportsPage() {
-  const [groupByIssue, setGroupByIssue] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
 
   return (
     <div className="p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-black text-2xl" style={{ color: '#0f172a' }}>Reports</h1>
-        <button className="btn-primary text-white text-sm font-bold px-4 py-2.5 rounded-xl flex items-center gap-2">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="font-black text-2xl" style={{ color: C.text }}>Reports</h1>
+        <button
+          onClick={() => setModalOpen(true)}
+          className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl"
+          style={{ background: C.accent, color: '#021a12' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Generate report
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3 mb-8 flex-wrap">
-        <div>
-          <label className="text-xs font-semibold block mb-1" style={{ color: '#94a3b8' }}>Tags</label>
-          <select className="scan-input rounded-xl px-3 py-2 text-sm" style={{ color: '#475569' }}>
-            <option>All</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-xs font-semibold block mb-1" style={{ color: '#94a3b8' }}>Targets</label>
-          <select className="scan-input rounded-xl px-3 py-2 text-sm" style={{ color: '#475569' }}>
-            <option>All</option><option>acmecorp.com</option><option>techstart.io</option>
-          </select>
-        </div>
-        <div>
-          <label className="text-xs font-semibold block mb-1" style={{ color: '#94a3b8' }}>From</label>
-          <input type="date" defaultValue="2026-04-12" className="scan-input rounded-xl px-3 py-2 text-sm" />
-        </div>
-        <div>
-          <label className="text-xs font-semibold block mb-1" style={{ color: '#94a3b8' }}>To</label>
-          <input type="date" defaultValue="2026-05-12" className="scan-input rounded-xl px-3 py-2 text-sm" />
-        </div>
-        <div className="ml-2 flex items-center gap-2 mt-5">
-          <button onClick={() => setGroupByIssue(p => !p)}
-            className="relative w-11 h-6 rounded-full transition-all"
-            style={{ background: groupByIssue ? '#6366f1' : '#e2e8f0' }}>
-            <span className="absolute top-1 transition-all w-4 h-4 rounded-full bg-white shadow"
-              style={{ left: groupByIssue ? '24px' : '4px' }} />
-          </button>
-          <span className="text-sm font-semibold" style={{ color: '#475569' }}>Group by issue</span>
-        </div>
+      {/* Stats strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <StatCard title="Total reports" value={14} />
+        <StatCard title="Last generated" value="Today" />
+        <StatCard title="Avg findings / report" value={23} />
+        <StatCard title="Reports this month" value={3} />
       </div>
 
-      {/* Issues section */}
-      <div className="mb-8">
-        <h2 className="font-bold text-base mb-4" style={{ color: '#0f172a' }}>Issues</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="card-glass rounded-2xl p-5">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8' }}>Open issues</p>
-              <button style={{ color: '#94a3b8' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-            </div>
-            <p className="font-black text-3xl mb-2" style={{ color: '#0f172a' }}>11</p>
-            <p className="text-xs mb-3" style={{ color: '#94a3b8' }}>Medium threat level</p>
-            <MiniBar label="Critical" count={4} color="#ef4444" />
-            <MiniBar label="High" count={3} color="#f59e0b" />
-            <MiniBar label="Medium" count={2} color="#3b82f6" />
-            <MiniBar label="Low" count={2} color="#22c55e" />
-          </div>
-
-          <div className="card-glass rounded-2xl p-5">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8' }}>New issues</p>
-              <button style={{ color: '#94a3b8' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-            </div>
-            <p className="font-black text-3xl mb-1" style={{ color: '#0f172a' }}>11</p>
-            <p className="text-xs mb-3" style={{ color: '#94a3b8' }}>0 Critical or High issues</p>
-            {/* Mini bar chart */}
-            <div className="flex items-end gap-1 h-12 mt-2">
-              {[0, 0, 2, 4, 4, 1].map((v, i) => (
-                <div key={i} className="flex-1 rounded-sm transition-all"
-                  style={{ height: `${v * 12}px`, background: i % 2 === 0 ? '#e2e8f0' : '#6366f1', minHeight: v > 0 ? '4px' : '0' }} />
-              ))}
-            </div>
-            <div className="flex justify-between mt-1">
-              <span className="text-xs" style={{ color: '#94a3b8' }}>Prev period</span>
-              <span className="text-xs" style={{ color: '#6366f1' }}>This period</span>
-            </div>
-          </div>
-
-          <div className="card-glass rounded-2xl p-5">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8' }}>Fixed issues</p>
-              <button style={{ color: '#94a3b8' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-            </div>
-            <p className="font-black text-3xl mb-2" style={{ color: '#22c55e' }}>0%</p>
-            <MiniBar label="Critical" count={0} color="#ef4444" />
-            <MiniBar label="High" count={0} color="#f59e0b" />
-            <MiniBar label="Medium" count={0} color="#3b82f6" />
-            <MiniBar label="Low" count={0} color="#22c55e" />
-          </div>
-
-          <div className="card-glass rounded-2xl p-5">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8' }}>Days to fix</p>
-              <button style={{ color: '#94a3b8' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-            </div>
-            <p className="font-black text-3xl mb-2" style={{ color: '#0f172a' }}>0</p>
-            <MiniBar label="Critical" count={0} color="#ef4444" />
-            <MiniBar label="High" count={0} color="#f59e0b" />
-            <MiniBar label="Medium" count={0} color="#3b82f6" />
-            <MiniBar label="Low" count={0} color="#22c55e" />
-          </div>
+      {/* Reports table */}
+      <div className="rounded-2xl overflow-hidden" style={GLASS}>
+        {/* Table header */}
+        <div
+          className="px-6 py-3 text-xs font-bold uppercase tracking-wider grid items-center"
+          style={{
+            gridTemplateColumns: '2.5fr 1fr 1fr 1fr auto auto',
+            gap: 12,
+            background: C.rowBg,
+            borderBottom: `1px solid ${C.innerBorder}`,
+            color: C.muted,
+          }}
+        >
+          <span>Report</span>
+          <span>Date</span>
+          <span>Findings</span>
+          <span>Type</span>
+          <span>Format</span>
+          <span></span>
         </div>
-      </div>
 
-      {/* Monitor performance */}
-      <div className="mb-8">
-        <h2 className="font-bold text-base mb-4" style={{ color: '#0f172a' }}>Monitor performance</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {/* Emerging threats */}
-          <div className="card-glass rounded-2xl p-5">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8' }}>Emerging threats</p>
-              <button style={{ color: '#94a3b8' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-            </div>
-            <p className="font-black text-3xl mb-1" style={{ color: '#22c55e' }}>0 / 0</p>
-            <p className="text-xs mb-3" style={{ color: '#94a3b8' }}>Passed</p>
-            <div className="space-y-2">
-              {[{ label: 'Critical', v: '0/0' }, { label: 'High', v: '0/0' }].map(({ label, v }) => (
-                <div key={label} className="flex items-center justify-between text-xs">
-                  <span className="font-semibold px-2 py-0.5 rounded-full" style={{ background: label === 'Critical' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)', color: label === 'Critical' ? '#ef4444' : '#f59e0b' }}>{label}</span>
-                  <span style={{ color: '#64748b' }}>{v}</span>
-                  <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#22c55e' }}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    All clear
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Days between scans */}
-          <div className="card-glass rounded-2xl p-5">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8' }}>Days between scans</p>
-              <button style={{ color: '#94a3b8' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-            </div>
-            <p className="font-black text-3xl mb-1" style={{ color: '#0f172a' }}>7.0</p>
-            <p className="text-xs mb-4" style={{ color: '#94a3b8' }}>3 scans total in this period</p>
-            <button className="text-xs font-semibold" style={{ color: '#6366f1' }}>View scans →</button>
-          </div>
-
-          {/* Cyber hygiene score */}
-          <div className="card-glass rounded-2xl p-5">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8' }}>Cyber hygiene score</p>
-              <button style={{ color: '#94a3b8' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-            </div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center font-black text-lg"
-                style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff' }}>
-                A+
-              </div>
-              <div>
-                <p className="font-black text-2xl" style={{ color: '#0f172a' }}>A+</p>
-                <p className="text-xs font-semibold" style={{ color: '#22c55e' }}>Excellent</p>
+        {REPORTS.map((r, i) => (
+          <div
+            key={r.id}
+            className="px-6 py-4 grid items-center"
+            style={{
+              gridTemplateColumns: '2.5fr 1fr 1fr 1fr auto auto',
+              gap: 12,
+              borderBottom: i < REPORTS.length - 1 ? `1px solid ${C.innerBorder}` : 'none',
+              background: i % 2 === 0 ? 'transparent' : C.rowBg,
+            }}
+          >
+            {/* Name + icon */}
+            <div className="flex items-center gap-3 min-w-0">
+              <ReportIcon type={r.type} />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate" style={{ color: C.text }}>{r.name}</p>
+                <p className="text-xs" style={{ color: C.muted }}>{r.target}</p>
               </div>
             </div>
-            <p className="text-xs" style={{ color: '#94a3b8' }}>Measures your time to fix against industry best practice</p>
+
+            {/* Date */}
+            <p className="text-xs" style={{ color: C.muted }}>{r.date}</p>
+
+            {/* Findings */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {r.findings.critical > 0 && (
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171' }}>
+                  {r.findings.critical}C
+                </span>
+              )}
+              {r.findings.high > 0 && (
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(245,158,11,0.12)', color: '#fbbf24' }}>
+                  {r.findings.high}H
+                </span>
+              )}
+            </div>
+
+            {/* Type */}
+            <p className="text-xs" style={{ color: C.muted }}>{r.type}</p>
+
+            {/* Format */}
+            <FormatBadge fmt={r.format} />
+
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <button
+                title="Download"
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
+                style={{ background: 'rgba(52,211,153,0.08)', color: C.accent }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </button>
+              <button
+                title="More options"
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ color: C.muted }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+                </svg>
+              </button>
+            </div>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* Attack surface */}
-      <div>
-        <h2 className="font-bold text-base mb-4" style={{ color: '#0f172a' }}>Attack surface</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {/* Most vulnerable targets */}
-          <div className="card-glass rounded-2xl p-5">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8' }}>Most vulnerable targets</p>
-              <button style={{ color: '#94a3b8' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-            </div>
-            {[
-              { rank: 1, domain: 'acmecorp.com', issues: 7 },
-              { rank: 2, domain: 'techstart.io', issues: 4 },
-            ].map(t => (
-              <div key={t.rank} className="flex items-center gap-3 py-2" style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <span className="w-5 text-xs font-bold" style={{ color: '#94a3b8' }}>{t.rank}</span>
-                <span className="flex-1 text-sm font-semibold" style={{ color: '#0f172a', fontFamily: 'monospace' }}>{t.domain}</span>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>{t.issues} issues</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Scanned targets */}
-          <div className="card-glass rounded-2xl p-5">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8' }}>Scanned targets</p>
-              <button style={{ color: '#94a3b8' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-            </div>
-            <p className="font-black text-3xl mb-2" style={{ color: '#6366f1' }}>2 / 2</p>
-            <div className="space-y-1">
-              {[{ label: 'External', count: 2 }, { label: 'Internal', count: 0 }, { label: 'Web app', count: 0 }].map(({ label, count }) => (
-                <div key={label} className="flex items-center justify-between text-xs">
-                  <span style={{ color: '#64748b' }}>{label}</span>
-                  <span className="font-bold" style={{ color: '#0f172a' }}>{count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* New services */}
-          <div className="card-glass rounded-2xl p-5">
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#94a3b8' }}>New services</p>
-              <button style={{ color: '#94a3b8' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-            </div>
-            <p className="font-black text-3xl mb-2" style={{ color: '#0ea5e9' }}>35</p>
-            <p className="text-xs" style={{ color: '#94a3b8' }}>Services discovered in this period across all targets</p>
-          </div>
-        </div>
-      </div>
+      {modalOpen && <GenerateModal onClose={() => setModalOpen(false)} />}
     </div>
   );
 }

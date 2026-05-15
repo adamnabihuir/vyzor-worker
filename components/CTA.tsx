@@ -76,7 +76,7 @@ export default function CTA() {
             { icon: '⚡', text: '99.97% Uptime' },
             { icon: '🛡️', text: 'ISO 27001 Ready' },
           ].map((badge, i) => (
-            <div key={i} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm card-dark">
+            <div key={i} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm" style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(255,255,255,0.13)', boxShadow: '0 4px 28px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)' }}>
               <span>{badge.icon}</span>
               <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-sec)' }}>{badge.text}</span>
             </div>
