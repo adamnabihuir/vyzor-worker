@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
           plan: session.metadata?.plan ?? 'starter',
           status: sub.status,
           trialEnd: sub.trial_end,
-          currentPeriodEnd: sub.current_period_end,
+          currentPeriodEnd: (sub as unknown as { current_period_end: number }).current_period_end,
         });
         break;
       }
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
           plan: sub.metadata?.plan ?? 'starter',
           status: sub.status,
           trialEnd: sub.trial_end,
-          currentPeriodEnd: sub.current_period_end,
+          currentPeriodEnd: (sub as unknown as { current_period_end: number }).current_period_end,
         });
         break;
       }
