@@ -3,134 +3,172 @@
 import { useState } from 'react';
 
 const TERMINAL_LINES = [
-  { text: '$ vanguard scan --target example.com', cls: 'terminal-line', delay: 0 },
-  { text: '[✓] Initiating asset discovery...', cls: 'terminal-green', delay: 0.4 },
-  { text: '[✓] 147 subdomains discovered', cls: 'terminal-green', delay: 0.8 },
-  { text: '[✓] Port scanning 147 hosts...', cls: 'terminal-green', delay: 1.2 },
-  { text: '[!] CVE-2024-1234 detected — CRITICAL', cls: 'terminal-red', delay: 1.6 },
-  { text: '[!] SSL misconfiguration on api.example.com', cls: 'terminal-yellow', delay: 2.0 },
-  { text: '[✓] Report generated — 23 findings', cls: 'terminal-green', delay: 2.4 },
+  { text: '$ vyzor scan --target acmecorp.com', cls: 'terminal-line', delay: 0 },
+  { text: '[✓] Discovered 147 subdomains', cls: 'terminal-green', delay: 0.4 },
+  { text: '[✓] Open ports fingerprinted', cls: 'terminal-green', delay: 0.8 },
+  { text: '[!] CVE-2024-1234 — CRITICAL (CVSS 9.8)', cls: 'terminal-red', delay: 1.2 },
+  { text: '[!] Exposed admin panel on port 8080', cls: 'terminal-yellow', delay: 1.6 },
+  { text: '[✓] 23 findings · report ready', cls: 'terminal-green', delay: 2.0 },
 ];
 
-export default function Hero() {
-  const [domain, setDomain] = useState('');
-  const [scanning, setScanning] = useState(false);
+const LOGOS = ['Stripe', 'Notion', 'Linear', 'Vercel', 'Shopify', 'Airbnb'];
 
-  const handleScan = (e: React.FormEvent) => {
+export default function Hero() {
+  const [email, setEmail] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!domain.trim()) return;
-    setScanning(true);
-    setTimeout(() => setScanning(false), 3000);
+    if (!email.trim()) return;
+    await fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    setSubmitted(true);
   };
 
   return (
     <section
       id="hero"
-      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden grid-bg"
-      style={{ paddingTop: '6rem', paddingBottom: '4rem', background: '#fafbff' }}
+      className="relative overflow-hidden grid-bg"
+      style={{ background: 'var(--bg)', paddingTop: '7rem', paddingBottom: '5rem' }}
     >
-      {/* Soft orbs */}
-      <div className="orb" style={{ width: '600px', height: '600px', top: '-200px', left: '-150px', background: 'rgba(99,102,241,0.07)', animationDelay: '0s' }} />
-      <div className="orb" style={{ width: '500px', height: '500px', top: '-100px', right: '-100px', background: 'rgba(14,165,233,0.06)', animationDelay: '2s' }} />
-      <div className="orb" style={{ width: '400px', height: '400px', bottom: '-100px', left: '35%', background: 'rgba(168,85,247,0.05)', animationDelay: '4s' }} />
+      {/* Emerald orbs */}
+      <div className="orb" style={{ width: '600px', height: '600px', top: '-200px', right: '-150px', background: 'rgba(52,211,153,0.07)' }} />
+      <div className="orb" style={{ width: '450px', height: '450px', bottom: '-100px', left: '-100px', background: 'rgba(16,185,129,0.05)', animationDelay: '3s' }} />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
-        {/* Badge */}
-        <div className="flex justify-center mb-6">
-          <span className="badge">⚡ Attack Surface Management — Next Generation</span>
-        </div>
+      <div className="relative z-10 max-w-6xl mx-auto px-6">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
 
-        {/* Headline */}
-        <h1
-          className="font-black tracking-tight mb-6"
-          style={{ fontSize: 'clamp(2.8rem, 6vw, 5rem)', lineHeight: '1.08', color: '#0f172a' }}
-        >
-          Your Attack Surface,{' '}
-          <br />
-          <span className="gradient-text">Fully Under Control.</span>
-        </h1>
+          {/* Left: copy */}
+          <div>
+            {/* Pill badge */}
+            <a href="#features" className="inline-flex items-center gap-2 mb-8 px-4 py-1.5 rounded-full text-sm font-semibold transition-all"
+              style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(52,211,153,0.14)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(52,211,153,0.08)'}
+            >
+              <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: '#34d399' }} />
+              New: Emerging Threat Scans now live
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
 
-        {/* Sub */}
-        <p
-          className="mx-auto mb-10 leading-relaxed"
-          style={{ maxWidth: '600px', color: '#64748b', fontSize: 'clamp(1rem, 2vw, 1.15rem)' }}
-        >
-          Vanguard continuously maps and monitors every exposed asset across your
-          entire attack surface — subdomains, ports, services, and vulnerabilities —
-          before attackers find them.
-        </p>
-
-        {/* Scan input */}
-        <form onSubmit={handleScan} className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto mb-5">
-          <div className="relative flex-1">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#94a3b8' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-              </svg>
+            {/* Decorative accent dots */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-2.5 h-2.5 rounded-full animate-glow" style={{ background: '#fbbf24', boxShadow: '0 0 8px rgba(251,191,36,0.6)' }} />
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#a78bfa', boxShadow: '0 0 8px rgba(167,139,250,0.5)', animation: 'glow-pulse 3s ease-in-out infinite 1s' }} />
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#fb923c', boxShadow: '0 0 8px rgba(251,146,60,0.5)', animation: 'glow-pulse 3s ease-in-out infinite 2s' }} />
             </div>
-            <input
-              type="text"
-              placeholder="Enter your domain — e.g. example.com"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              className="scan-input w-full rounded-xl pl-11 pr-4 py-4 text-sm"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={scanning}
-            className="btn-primary font-bold text-white rounded-xl px-8 py-4 whitespace-nowrap text-sm"
-          >
-            {scanning ? (
-              <span className="flex items-center gap-2">
-                <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
-                Scanning...
-              </span>
-            ) : 'Start Free Scan →'}
-          </button>
-        </form>
 
-        <p style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
-          No credit card required · Results in under 60 seconds · SOC 2 compliant
-        </p>
+            <h1
+              className="font-black tracking-tight mb-6"
+              style={{ fontSize: 'clamp(2.6rem, 5vw, 4rem)', lineHeight: '1.06', color: 'var(--text-pri)' }}
+            >
+              Stop reacting.<br />
+              <span className="gradient-text">Own your attack surface.</span>
+            </h1>
 
-        {/* Terminal */}
-        <div
-          className="rounded-2xl mt-16 mx-auto text-left overflow-hidden animate-float"
-          style={{ maxWidth: '680px', background: '#0f172a', border: '1px solid rgba(99,102,241,0.2)', boxShadow: '0 24px 60px rgba(15,23,42,0.15), 0 0 0 1px rgba(99,102,241,0.06)' }}
-        >
-          <div
-            className="flex items-center gap-2 px-5 py-3"
-            style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)' }}
-          >
-            <div className="w-3 h-3 rounded-full" style={{ background: '#ef4444' }} />
-            <div className="w-3 h-3 rounded-full" style={{ background: '#eab308' }} />
-            <div className="w-3 h-3 rounded-full" style={{ background: '#22c55e' }} />
-            <span className="ml-3" style={{ color: '#475569', fontSize: '0.75rem', fontFamily: 'monospace' }}>vanguard — scan</span>
-          </div>
-          <div className="px-6 py-5 space-y-2" style={{ minHeight: '200px' }}>
-            {TERMINAL_LINES.map((line, i) => (
-              <p
-                key={i}
-                className={line.cls}
-                style={{ opacity: 0, animation: `fade-up 0.4s ease ${line.delay}s forwards` }}
-              >
-                {line.text}
+            <p className="mb-10 leading-relaxed" style={{ color: 'var(--text-sec)', fontSize: '1.1rem', maxWidth: '480px' }}>
+              Vyzor continuously discovers every exposed asset, fingerprints vulnerabilities,
+              and prioritises what to fix first — before attackers find it.
+            </p>
+
+            {/* Email capture */}
+            {!submitted ? (
+              <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 mb-6" style={{ maxWidth: '460px' }}>
+                <input
+                  type="email"
+                  placeholder="Enter your work email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="scan-input-dark flex-1 rounded-xl px-4 py-3.5 text-sm"
+                />
+                <button type="submit" className="btn-primary font-semibold rounded-xl px-6 py-3.5 whitespace-nowrap text-sm">
+                  Start free trial →
+                </button>
+              </form>
+            ) : (
+              <div className="flex items-center gap-3 mb-6 px-5 py-4 rounded-xl"
+                style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.25)', maxWidth: '460px' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span style={{ color: '#34d399', fontWeight: 600, fontSize: '0.9rem' }}>You&apos;re in! We&apos;ll be in touch soon.</span>
+              </div>
+            )}
+
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+              14-day free trial · No credit card · SOC 2 Type II
+            </p>
+
+            {/* Social proof */}
+            <div className="flex items-center gap-3 mt-8">
+              <div className="flex -space-x-2">
+                {['#6366f1', '#0ea5e9', '#a855f7', '#34d399'].map((c, i) => (
+                  <div key={i} className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                    style={{ background: c, border: '2px solid #021a12' }}>
+                    {['A', 'J', 'M', 'S'][i]}
+                  </div>
+                ))}
+              </div>
+              <p style={{ color: 'var(--text-sec)', fontSize: '0.82rem' }}>
+                <span style={{ color: 'var(--text-pri)', fontWeight: 700 }}>500+</span> security teams trust Vyzor
               </p>
-            ))}
+            </div>
+          </div>
+
+          {/* Right: terminal */}
+          <div className="animate-float">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                background: 'rgba(2,16,10,0.85)',
+                border: '1px solid rgba(52,211,153,0.15)',
+                boxShadow: '0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(52,211,153,0.06), 0 0 60px rgba(52,211,153,0.05)',
+                backdropFilter: 'blur(12px)',
+              }}
+            >
+              {/* Window chrome */}
+              <div className="flex items-center gap-2 px-5 py-3.5"
+                style={{ borderBottom: '1px solid rgba(52,211,153,0.08)', background: 'rgba(0,0,0,0.3)' }}>
+                <div className="w-3 h-3 rounded-full" style={{ background: '#ef4444' }} />
+                <div className="w-3 h-3 rounded-full" style={{ background: '#eab308' }} />
+                <div className="w-3 h-3 rounded-full" style={{ background: '#22c55e' }} />
+                <span className="ml-4 font-mono text-xs" style={{ color: 'rgba(52,211,153,0.4)' }}>vyzor — scan</span>
+              </div>
+              <div className="px-6 py-5 space-y-2" style={{ minHeight: '190px' }}>
+                {TERMINAL_LINES.map((line, i) => (
+                  <p key={i} className={line.cls}
+                    style={{ opacity: 0, animation: `fade-up 0.4s ease ${line.delay}s forwards` }}>
+                    {line.text}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            {/* Floating stat cards */}
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              {[
+                { value: '147', label: 'Assets found', color: '#34d399' },
+                { value: '23', label: 'Findings', color: '#f87171' },
+                { value: '<60s', label: 'Time to scan', color: '#fbbf24' },
+              ].map((s) => (
+                <div key={s.label} className="card-dark rounded-xl p-3 text-center">
+                  <div className="font-black text-lg" style={{ color: s.color }}>{s.value}</div>
+                  <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Trust logos */}
-        <div className="mt-14">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-6" style={{ color: '#cbd5e1' }}>
+        {/* Logo bar */}
+        <div className="mt-20 pt-10" style={{ borderTop: '1px solid rgba(52,211,153,0.08)' }}>
+          <p className="text-center text-xs font-semibold uppercase tracking-widest mb-8" style={{ color: 'var(--text-muted)' }}>
             Trusted by security teams at
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-8">
-            {['Stripe', 'Airbnb', 'Notion', 'Linear', 'Vercel', 'Shopify'].map((name) => (
-              <span key={name} className="text-sm font-bold tracking-wide" style={{ color: '#cbd5e1' }}>
+          <div className="flex flex-wrap items-center justify-center gap-10">
+            {LOGOS.map((name) => (
+              <span key={name} className="text-sm font-bold tracking-wide" style={{ color: 'rgba(110,231,183,0.25)' }}>
                 {name}
               </span>
             ))}

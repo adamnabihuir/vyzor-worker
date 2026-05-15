@@ -3,7 +3,18 @@
     "allow": [
       "Bash(npm run *)",
       "mcp__Claude_Preview__preview_start",
-      "PowerShell(taskkill /PID 11160 /F)"
+      "PowerShell(taskkill /PID 11160 /F)",
+      "Bash(npx vercel *)",
+      "Bash(npm install *)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\ZAHRA\\\\vanguard-landing\\\\app\\\\auth\\\\login\\\\page.tsx\" -Force)",
+      "Bash(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\ZAHRA\\\\vanguard-landing\\\\app\\\\auth\\\\login\\\\[[...rest]]\" -Force)",
+      "Bash(Out-Null)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\ZAHRA\\\\vanguard-landing\\\\app\\\\auth\\\\register\\\\page.tsx\" -Force)",
+      "Bash(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\ZAHRA\\\\vanguard-landing\\\\app\\\\auth\\\\register\\\\[[...rest]]\" -Force)",
+      "Bash(Write-Host \"done\")",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(node -e ' *)"
     ]
   }
 }
