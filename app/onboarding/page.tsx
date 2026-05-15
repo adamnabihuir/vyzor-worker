@@ -24,18 +24,29 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [goal, setGoal] = useState('');
   const [scope, setScope] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
   const startTrial = async (plan: 'starter' | 'growth') => {
-    setLoading(true);
-    const res = await fetch('/api/stripe/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan }),
-    });
-    const { url } = await res.json();
-    if (url) window.location.href = url;
-    else setLoading(false);
+    setLoading(plan);
+    setError('');
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setError(data.error || 'Something went wrong. Please try again.');
+        setLoading(null);
+      }
+    } catch (e) {
+      setError('Connection error. Please try again.');
+      setLoading(null);
+    }
   };
 
   return (
@@ -162,6 +173,12 @@ export default function OnboardingPage() {
               <h1 className="text-2xl font-black mb-1" style={{ color: '#0f172a' }}>Start your free trial</h1>
               <p className="text-sm mb-6" style={{ color: '#64748b' }}>14 days free. No charge today. Cancel anytime.</p>
 
+              {error && (
+                <div className="mb-4 px-4 py-3 rounded-xl text-sm font-semibold" style={{ background: 'rgba(239,68,68,0.08)', color: '#dc2626', border: '1px solid rgba(239,68,68,0.2)' }}>
+                  ⚠️ {error}
+                </div>
+              )}
+
               <div className="space-y-3 mb-6">
                 {/* Starter */}
                 <div className="rounded-2xl p-5" style={{ border: '2px solid #6366f1', background: 'rgba(99,102,241,0.04)' }}>
@@ -175,10 +192,10 @@ export default function OnboardingPage() {
                       <p className="text-xs" style={{ color: '#94a3b8' }}>/month after trial</p>
                     </div>
                   </div>
-                  <button onClick={() => startTrial('starter')} disabled={loading}
+                  <button onClick={() => startTrial('starter')} disabled={loading !== null}
                     className="w-full py-3 rounded-xl font-bold text-sm text-white transition-all"
-                    style={{ background: loading ? '#94a3b8' : '#6366f1' }}>
-                    {loading ? 'Redirecting...' : 'Start free trial →'}
+                    style={{ background: loading !== null ? '#94a3b8' : '#6366f1' }}>
+                    {loading === 'starter' ? 'Opening Stripe...' : 'Start free trial →'}
                   </button>
                 </div>
 
@@ -194,10 +211,10 @@ export default function OnboardingPage() {
                       <p className="text-xs" style={{ color: '#94a3b8' }}>/month after trial</p>
                     </div>
                   </div>
-                  <button onClick={() => startTrial('growth')} disabled={loading}
+                  <button onClick={() => startTrial('growth')} disabled={loading !== null}
                     className="w-full py-3 rounded-xl font-bold text-sm transition-all"
                     style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#0f172a' }}>
-                    {loading ? 'Redirecting...' : 'Start free trial →'}
+                    {loading === 'growth' ? 'Opening Stripe...' : 'Start free trial →'}
                   </button>
                 </div>
               </div>
