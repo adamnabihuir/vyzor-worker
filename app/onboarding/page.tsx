@@ -44,7 +44,8 @@ export default function OnboardingPage() {
         setLoading(null);
       }
     } catch (e) {
-      setError('Connection error. Please try again.');
+      const msg = e instanceof Error ? e.message : 'Connection error';
+      setError(`${msg}. Please try again.`);
       setLoading(null);
     }
   };
