@@ -3,11 +3,65 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
+const BASE_URL = "https://vanguard-blond-delta.vercel.app";
+
 export const metadata: Metadata = {
-  title: "Vyzor — Attack Surface Management for Enterprise",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "Vyzor — Attack Surface Management",
+    template: "%s | Vyzor",
+  },
   description:
-    "Continuously map and monitor your entire attack surface. Subdomain discovery, port scanning, and vulnerability detection — all in one platform.",
-  keywords: "attack surface management, ASM, vulnerability scanning, cybersecurity, CISO",
+    "Vyzor continuously discovers every exposed asset, fingerprints vulnerabilities, and prioritises what to fix first — before attackers find it.",
+  keywords: [
+    "attack surface management",
+    "ASM",
+    "vulnerability scanning",
+    "subdomain discovery",
+    "cybersecurity platform",
+    "CISO tools",
+    "penetration testing",
+    "CVE monitoring",
+  ],
+  authors: [{ name: "Vyzor" }],
+  creator: "Vyzor",
+  publisher: "Vyzor",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: BASE_URL,
+    siteName: "Vyzor",
+    title: "Vyzor — Attack Surface Management",
+    description:
+      "Continuously map and monitor your entire attack surface. Find vulnerabilities before attackers do.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Vyzor — Attack Surface Management",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vyzor — Attack Surface Management",
+    description:
+      "Continuously map and monitor your entire attack surface. Find vulnerabilities before attackers do.",
+    images: ["/og-image.png"],
+    creator: "@vyzorsec",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({
