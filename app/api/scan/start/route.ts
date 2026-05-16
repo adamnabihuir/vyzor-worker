@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await req.json().catch(() => ({}));
     const domain = typeof body.domain === 'string' ? body.domain.trim() : '';
@@ -20,16 +26,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid domain format' }, { status: 400 });
     }
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) {
-      return NextResponse.json({ error: `Missing env: URL=${!!url} KEY=${!!key}` }, { status: 500 });
-    }
-
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('scans')
-      .insert({ domain: clean })
+      .insert({ domain: clean, user_id: userId })
       .select('id')
       .single();
 
