@@ -175,9 +175,41 @@ export default function DashboardPage() {
   };
 
   const hasRealData = completedScans.length > 0;
+  const isNewUser = !loadingScans && recentScans.length === 0;
 
   return (
     <div className="p-8">
+
+      {/* Onboarding banner for new users */}
+      {isNewUser && (
+        <div className="mb-8 rounded-2xl p-6" style={{ background: 'linear-gradient(135deg, rgba(52,211,153,0.1) 0%, rgba(16,185,129,0.05) 100%)', border: '1px solid rgba(52,211,153,0.25)' }}>
+          <div className="flex items-start gap-4 mb-5">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.3)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+              <h2 className="font-black text-lg mb-1" style={{ color: '#f0fdf4' }}>Welcome to Vyzor — let&apos;s secure your first domain</h2>
+              <p style={{ color: 'rgba(167,243,208,0.65)', fontSize: '0.875rem' }}>Your trial is active. Run your first scan below to discover exposed assets and vulnerabilities.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[
+              { step: '1', title: 'Enter your domain', desc: 'Type example.com in the scan box below and click Scan now', icon: '🔍' },
+              { step: '2', title: 'Get your results', desc: 'Assets, open ports, and vulnerabilities found in under 60s', icon: '⚡' },
+              { step: '3', title: 'Connect Slack', desc: 'Go to Integrations to receive instant alerts on new findings', icon: '🔔' },
+            ].map(s => (
+              <div key={s.step} className="flex items-start gap-3 p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <span className="text-xl flex-shrink-0">{s.icon}</span>
+                <div>
+                  <p className="font-bold text-sm mb-0.5" style={{ color: '#f0fdf4' }}>{s.title}</p>
+                  <p className="text-xs" style={{ color: 'rgba(167,243,208,0.55)' }}>{s.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>

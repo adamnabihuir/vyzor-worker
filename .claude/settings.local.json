@@ -14,7 +14,25 @@
       "Bash(Write-Host \"done\")",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\ZAHRA\\\\vanguard-landing\\\\app\\\\api\\\\scan\\\\start\" -Force)",
+      "Bash(npx tsc *)",
+      "Bash(vercel deploy *)",
+      "Bash(./node_modules/.bin/vercel deploy *)",
+      "Bash(curl -s -X POST https://vanguard-blond-delta.vercel.app/api/scan/start -H 'Content-Type: application/json' -d '{\"domain\":\"example.com\"}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -X POST https://vanguard-blond-delta.vercel.app/api/scan/start -H \"Content-Type: application/json\" -d '{\"domain\":\"example.com\"}')",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\ZAHRA\\\\vanguard-landing\"; npx vercel deploy --prod 2>&1 | Where-Object { $_ -match \"Production|Aliased|Error|error|READY\" })",
+      "Bash(curl -s -X POST https://vanguard-blond-delta.vercel.app/api/scan/start -H 'Content-Type: application/json' -d '{\"domain\":\"github.com\"}')",
+      "Bash(python3 -c ' *)",
+      "Bash(mkdir -p \"C:/Users/ZAHRA/vanguard-landing/app/api/scan/[id]\" && echo \"ok\")",
+      "Bash(curl -s https://vanguard-blond-delta.vercel.app/api/scan/a9462b53-285c-4637-a310-11281a25c6c7)",
+      "Bash(git push *)",
+      "Bash(node -e \"require\\('resend'\\)\")",
+      "Bash(cat middleware.ts)",
+      "Bash(cat middleware.js)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\ZAHRA\\\\vanguard-landing\\\\app\\\\api\\\\scan\\\\[id]\\\\diff\")",
+      "Bash(git remote *)"
     ]
   }
 }
