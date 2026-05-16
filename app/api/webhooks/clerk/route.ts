@@ -3,9 +3,8 @@ import { NextResponse } from 'next/server';
 import { Webhook } from 'svix';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST(req: Request) {
+  const resend = new Resend(process.env.RESEND_API_KEY ?? '');
   const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
   if (!webhookSecret) {
     return NextResponse.json({ error: 'No webhook secret' }, { status: 500 });

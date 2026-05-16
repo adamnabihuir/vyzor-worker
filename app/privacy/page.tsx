@@ -41,7 +41,7 @@ export default function PrivacyPage() {
         </SECTION>
 
         <SECTION title="3. How we use your data">
-          <ul style={{ listStyle: 'disc', paddingLeft: '1.5rem', spaceY: '0.5rem' }}>
+          <ul style={{ listStyle: 'disc', paddingLeft: '1.5rem' }}>
             <li>To provide and improve the Vyzor platform</li>
             <li>To send you scan notifications and security alerts you have configured</li>
             <li>To send transactional emails (account confirmation, billing receipts)</li>
