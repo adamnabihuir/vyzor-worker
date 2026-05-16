@@ -68,6 +68,8 @@ export default function IntegrationsPage() {
   const [slackShowForm, setSlackShowForm] = useState(false);
   const [slackSaving, setSlackSaving] = useState(false);
   const [slackErr, setSlackErr] = useState('');
+  const [slackTesting, setSlackTesting] = useState(false);
+  const [slackTestResult, setSlackTestResult] = useState<'ok' | 'fail' | null>(null);
 
   useEffect(() => {
     fetch('/api/integrations/slack')
@@ -99,6 +101,20 @@ export default function IntegrationsPage() {
     await fetch('/api/integrations/slack', { method: 'DELETE' });
     setSlackConfigured(false);
     setSlackShowForm(false);
+    setSlackTestResult(null);
+  };
+
+  const testSlack = async () => {
+    setSlackTesting(true);
+    setSlackTestResult(null);
+    try {
+      const res = await fetch('/api/integrations/slack/test', { method: 'POST' });
+      setSlackTestResult(res.ok ? 'ok' : 'fail');
+    } catch {
+      setSlackTestResult('fail');
+    } finally {
+      setSlackTesting(false);
+    }
   };
 
   const connectedCount = CONNECTED_INTEGRATIONS.filter(i => !disconnected.has(i.name)).length + connected.size + (slackConfigured ? 1 : 0);
@@ -189,12 +205,19 @@ export default function IntegrationsPage() {
 
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12 }}>
               {slackConfigured ? (
-                <button onClick={disconnectSlack} className="w-full py-1.5 rounded-lg text-xs font-semibold transition-all"
-                  style={{ background: 'rgba(239,68,68,0.08)', color: '#f87171', border: '1px solid rgba(239,68,68,0.15)' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.15)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}>
-                  Disconnect
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button onClick={testSlack} disabled={slackTesting} style={{ flex: 1, padding: '6px 0', borderRadius: '8px', background: slackTestResult === 'ok' ? 'rgba(52,211,153,0.12)' : slackTestResult === 'fail' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.06)', border: `1px solid ${slackTestResult === 'ok' ? 'rgba(52,211,153,0.3)' : slackTestResult === 'fail' ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.1)'}`, color: slackTestResult === 'ok' ? '#34d399' : slackTestResult === 'fail' ? '#ef4444' : 'rgba(167,243,208,0.7)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+                      {slackTesting ? 'Sending…' : slackTestResult === 'ok' ? '✓ Sent!' : slackTestResult === 'fail' ? '✗ Failed' : 'Send test'}
+                    </button>
+                    <button onClick={disconnectSlack} style={{ flex: 1, padding: '6px 0', borderRadius: '8px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', color: '#f87171', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>
+                      Disconnect
+                    </button>
+                  </div>
+                  {slackTestResult === 'fail' && (
+                    <p style={{ fontSize: '0.68rem', color: '#ef4444', margin: 0 }}>Webhook invalide — vérifie l&apos;URL et reconnecte.</p>
+                  )}
+                </div>
               ) : (
                 <button onClick={() => setSlackShowForm(true)} className="w-full py-2 rounded-xl text-xs font-bold transition-all"
                   style={{ background: 'rgba(52,211,153,0.08)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}
