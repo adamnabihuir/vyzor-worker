@@ -1,307 +1,479 @@
 import { jsPDF } from 'jspdf';
 import type { ScanRow } from './supabase';
 
-const C = {
-  bg: [2, 26, 18] as [number, number, number],
-  accent: [52, 211, 153] as [number, number, number],
-  text: [240, 253, 244] as [number, number, number],
-  muted: [100, 160, 130] as [number, number, number],
-  critical: [239, 68, 68] as [number, number, number],
-  high: [245, 158, 11] as [number, number, number],
-  medium: [59, 130, 246] as [number, number, number],
-  low: [52, 211, 153] as [number, number, number],
-  panel: [15, 40, 28] as [number, number, number],
-  border: [30, 60, 45] as [number, number, number],
+// ── Palette ────────────────────────────────────────────────────────────────────
+type RGB = [number, number, number];
+
+const WHITE: RGB  = [255, 255, 255];
+const NAVY: RGB   = [15,  23,  42];   // slate-900
+const DARK: RGB   = [30,  41,  59];   // slate-800
+const BODY: RGB   = [51,  65,  85];   // slate-700
+const MUTED: RGB  = [100, 116, 139];  // slate-500
+const RULE: RGB   = [226, 232, 240];  // slate-200
+const BG2: RGB    = [248, 250, 252];  // slate-50
+
+const SEV: Record<string, { pill: RGB; text: RGB; row: RGB; label: string }> = {
+  critical: { pill: [185, 28, 28],  text: WHITE, row: [254, 242, 242], label: 'CRITICAL' },
+  high:     { pill: [194, 65, 12],  text: WHITE, row: [255, 247, 237], label: 'HIGH'     },
+  medium:   { pill: [29,  78, 216], text: WHITE, row: [239, 246, 255], label: 'MEDIUM'   },
+  low:      { pill: [21, 128, 61],  text: WHITE, row: [240, 253, 244], label: 'LOW'      },
+  info:     { pill: [100, 116, 139], text: WHITE, row: [248, 250, 252], label: 'INFO'    },
 };
 
-const SEV_COLOR: Record<string, [number, number, number]> = {
-  critical: C.critical, high: C.high, medium: C.medium, low: C.low, info: C.muted,
+const TOOL_COLOR: Record<string, RGB> = {
+  nmap:   [30,  78, 216],
+  nuclei: [124, 58, 237],
 };
 
-function setColor(doc: jsPDF, rgb: [number, number, number], fill = true) {
-  if (fill) doc.setFillColor(...rgb);
-  else doc.setTextColor(...rgb);
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function grade(score: number): { g: string; color: RGB } {
+  if (score <= 20) return { g: 'A', color: [21, 128,  61] };
+  if (score <= 40) return { g: 'B', color: [29,  78, 216] };
+  if (score <= 60) return { g: 'C', color: [194, 65,  12] };
+  if (score <= 80) return { g: 'D', color: [185, 28,  28] };
+  return             { g: 'F', color: [127,  29,  29] };
 }
 
-function rect(doc: jsPDF, x: number, y: number, w: number, h: number, color: [number, number, number], radius = 0) {
-  setColor(doc, color);
-  if (radius) doc.roundedRect(x, y, w, h, radius, radius, 'F');
-  else doc.rect(x, y, w, h, 'F');
+function riskLabel(score: number) {
+  if (score <= 20) return 'Low Risk';
+  if (score <= 40) return 'Medium Risk';
+  if (score <= 60) return 'Elevated Risk';
+  if (score <= 80) return 'High Risk';
+  return 'Critical Risk';
 }
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function fmtDateTime(iso: string) {
+  return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function rgb(doc: jsPDF, c: RGB, fill = true) {
+  if (fill) doc.setFillColor(c[0], c[1], c[2]);
+  else      doc.setTextColor(c[0], c[1], c[2]);
+}
+
+function box(doc: jsPDF, x: number, y: number, w: number, h: number, color: RGB, r = 0) {
+  rgb(doc, color);
+  if (r > 0) doc.roundedRect(x, y, w, h, r, r, 'F');
+  else       doc.rect(x, y, w, h, 'F');
+}
+
+function hRule(doc: jsPDF, y: number, x1 = 18, x2 = 192) {
+  doc.setDrawColor(RULE[0], RULE[1], RULE[2]);
+  doc.setLineWidth(0.25);
+  doc.line(x1, y, x2, y);
+}
+
+function addWatermark(doc: jsPDF) {
+  doc.saveGraphicsState?.();
+  rgb(doc, [226, 232, 240], false);   // very light gray
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(36);
+  doc.text('STRICTLY CONFIDENTIAL', 105, 148.5, { angle: 45, align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.restoreGraphicsState?.();
+}
+
+// ── Main export ────────────────────────────────────────────────────────────────
 
 export function generateScanPdf(scan: ScanRow): void {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const W = 210;
-  const MARGIN = 18;
-  const CW = W - MARGIN * 2;
+  const doc   = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W     = 210;
+  const MX    = 18;   // margin x
+  const CW    = W - MX * 2;
 
-  // ── Page 1: Cover ──────────────────────────────────────────────────────────
-  rect(doc, 0, 0, W, 297, C.bg);
+  const stats    = (scan.stats as { vulnerabilities?: { critical: number; high: number; medium: number; low: number }; riskScore?: number; assetsDiscovered?: number; portsScanned?: number }) ?? {};
+  const v        = stats.vulnerabilities ?? { critical: 0, high: 0, medium: 0, low: 0 };
+  const score    = stats.riskScore ?? 0;
+  const { g, color: gColor } = grade(score);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const findings = ((scan.findings ?? []) as any[]).filter(f => f.severity !== 'info');
 
-  // Header bar
-  rect(doc, 0, 0, W, 48, C.panel);
-  doc.setDrawColor(...C.border);
-  doc.setLineWidth(0.3);
-  doc.line(0, 48, W, 48);
+  // ────────────────────────────────────────────────────────────────────────────
+  // PAGE 1 — COVER
+  // ────────────────────────────────────────────────────────────────────────────
+  box(doc, 0, 0, W, 297, WHITE);
 
-  // Logo
-  setColor(doc, C.accent, false);
+  // Dark header band
+  box(doc, 0, 0, W, 52, NAVY);
+
+  // Logo — left
+  rgb(doc, WHITE, false);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text('VYZOR', MARGIN, 28);
+  doc.setFontSize(22);
+  doc.text('VYZOR', MX, 24);
 
-  setColor(doc, C.muted, false);
-  doc.setFontSize(8);
+  rgb(doc, [148, 163, 184] as RGB, false);
   doc.setFont('helvetica', 'normal');
-  doc.text('Attack Surface Management', MARGIN, 35);
-
-  // Report label top-right
-  setColor(doc, C.muted, false);
   doc.setFontSize(8);
-  doc.text('SECURITY REPORT', W - MARGIN, 24, { align: 'right' });
-  setColor(doc, C.text, false);
-  doc.setFontSize(9);
+  doc.text('ATTACK SURFACE MANAGEMENT', MX, 31);
+
+  // Report label — right
+  rgb(doc, [148, 163, 184] as RGB, false);
+  doc.setFontSize(8);
+  doc.text('SECURITY ASSESSMENT REPORT', W - MX, 20, { align: 'right' });
+  rgb(doc, WHITE, false);
   doc.setFont('helvetica', 'bold');
-  doc.text(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), W - MARGIN, 31, { align: 'right' });
+  doc.setFontSize(9);
+  doc.text(fmtDate(scan.created_at ?? new Date().toISOString()), W - MX, 28, { align: 'right' });
+
+  // STRICTLY CONFIDENTIAL stamp — red box top-right
+  box(doc, W - MX - 52, 36, 52, 10, [185, 28, 28] as RGB, 2);
+  rgb(doc, WHITE, false);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.text('STRICTLY CONFIDENTIAL', W - MX - 26, 42.5, { align: 'center' });
 
   // Domain title
   let y = 72;
-  setColor(doc, C.accent, false);
+  rgb(doc, NAVY, false);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(28);
-  doc.text(scan.domain, MARGIN, y);
+  doc.setFontSize(26);
+  doc.text(scan.domain ?? '—', MX, y);
 
-  y += 10;
-  setColor(doc, C.muted, false);
+  y += 8;
+  rgb(doc, MUTED, false);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text('Deep Scan  ·  nmap + nuclei + subfinder', MARGIN, y);
+  doc.setFontSize(9.5);
+  doc.text('External Attack Surface Assessment  ·  subfinder + nmap + nuclei', MX, y);
 
-  // Risk score badge
-  const riskScore = scan.stats?.riskScore ?? 0;
-  const riskColor: [number, number, number] = riskScore >= 75 ? C.critical : riskScore >= 50 ? C.high : riskScore >= 25 ? C.medium : C.low;
-  const riskLabel = riskScore >= 75 ? 'Critical Risk' : riskScore >= 50 ? 'High Risk' : riskScore >= 25 ? 'Medium Risk' : 'Low Risk';
+  // Thin rule
+  y += 8;
+  hRule(doc, y);
+
+  // Risk score block
   y += 14;
-  rect(doc, MARGIN, y, 48, 22, C.panel, 4);
-  doc.setDrawColor(...riskColor);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(MARGIN, y, 48, 22, 4, 4, 'S');
-  setColor(doc, riskColor, false);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.text(String(riskScore), MARGIN + 14, y + 13);
-  doc.setFontSize(8);
-  doc.text(riskLabel, MARGIN + 14 + 10, y + 13, { align: 'left' });
+  // Score card
+  box(doc, MX, y, 56, 34, BG2, 4);
+  doc.setDrawColor(RULE[0], RULE[1], RULE[2]);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(MX, y, 56, 34, 4, 4, 'S');
 
-  // Stats grid
-  y += 34;
-  const stats = scan.stats ?? {};
-  const v = stats.vulnerabilities ?? { critical: 0, high: 0, medium: 0, low: 0 };
-  const statItems = [
-    { label: 'Assets', value: String(stats.assetsDiscovered ?? 0) },
-    { label: 'Open Ports', value: String(stats.portsScanned ?? 0) },
-    { label: 'Critical', value: String(v.critical), color: C.critical },
-    { label: 'High', value: String(v.high), color: C.high },
-    { label: 'Medium', value: String(v.medium), color: C.medium },
-    { label: 'Low', value: String(v.low), color: C.low },
+  // Grade circle
+  box(doc, MX + 6, y + 6, 22, 22, gColor, 11);
+  rgb(doc, WHITE, false);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.text(g, MX + 17, y + 20, { align: 'center' });
+
+  // Score number
+  rgb(doc, gColor, false);
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${score}`, MX + 36, y + 16);
+  rgb(doc, MUTED, false);
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text('/ 100', MX + 36, y + 23);
+  rgb(doc, gColor, false);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(riskLabel(score).toUpperCase(), MX + 36, y + 30);
+
+  // Stats row
+  const statCols = [
+    { label: 'Assets',        value: String(stats.assetsDiscovered ?? 0), color: DARK  },
+    { label: 'Open Ports',    value: String(stats.portsScanned ?? 0),     color: DARK  },
+    { label: 'Critical',      value: String(v.critical),  color: [185, 28, 28] as RGB  },
+    { label: 'High',          value: String(v.high),      color: [194, 65, 12] as RGB  },
+    { label: 'Medium',        value: String(v.medium),    color: [29, 78, 216] as RGB  },
+    { label: 'Low',           value: String(v.low),       color: [21, 128, 61] as RGB  },
   ];
-  const cardW = (CW - 10) / 3;
-  statItems.forEach((s, i) => {
-    const col = i % 3;
-    const row = Math.floor(i / 3);
-    const cx = MARGIN + col * (cardW + 5);
-    const cy = y + row * 28;
-    rect(doc, cx, cy, cardW, 24, C.panel, 3);
-    const valColor = s.color ?? C.text;
-    setColor(doc, valColor, false);
+  const statW = (CW - 62) / 6;
+  statCols.forEach((s, i) => {
+    const sx = MX + 62 + i * statW;
+    box(doc, sx, y, statW - 2, 34, BG2, 3);
+    doc.setDrawColor(RULE[0], RULE[1], RULE[2]);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(sx, y, statW - 2, 34, 3, 3, 'S');
+    rgb(doc, s.color, false);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
-    doc.text(s.value, cx + cardW / 2, cy + 11, { align: 'center' });
-    setColor(doc, C.muted, false);
+    doc.text(s.value, sx + (statW - 2) / 2, y + 16, { align: 'center' });
+    rgb(doc, MUTED, false);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.text(s.label.toUpperCase(), cx + cardW / 2, cy + 18, { align: 'center' });
+    doc.setFontSize(6.5);
+    doc.text(s.label.toUpperCase(), sx + (statW - 2) / 2, y + 26, { align: 'center' });
   });
 
-  // Divider
-  y += 66;
-  doc.setDrawColor(...C.border);
-  doc.setLineWidth(0.3);
-  doc.line(MARGIN, y, W - MARGIN, y);
-
-  // Scan metadata
+  // Executive Summary
+  y += 44;
+  hRule(doc, y);
   y += 10;
-  const metaItems = [
-    ['Scan ID', scan.id.slice(0, 8) + '...'],
-    ['Started', scan.created_at ? new Date(scan.created_at).toLocaleString('en-GB') : '—'],
-    ['Completed', scan.completed_at ? new Date(scan.completed_at).toLocaleString('en-GB') : '—'],
-    ['Status', scan.status.toUpperCase()],
+  rgb(doc, NAVY, false);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('Executive Summary', MX, y);
+
+  y += 7;
+  rgb(doc, BODY, false);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  const summary = `This automated security assessment details the external attack surface and exposed vulnerabilities of ${scan.domain ?? 'the target domain'}. The scan was performed using industry-standard open-source tools (subfinder for subdomain enumeration, nmap for port and service detection, and nuclei for vulnerability identification). A total of ${findings.length} security finding${findings.length !== 1 ? 's' : ''} were identified across ${stats.assetsDiscovered ?? 0} discovered assets. ${v.critical + v.high > 0 ? `Immediate remediation is strongly recommended for the ${v.critical + v.high} critical and high severity finding${v.critical + v.high !== 1 ? 's' : ''} detailed in this report.` : 'No critical or high severity findings were detected.'}`;
+  const summaryLines = doc.splitTextToSize(summary, CW) as string[];
+  summaryLines.forEach((line: string, i: number) => {
+    doc.text(line, MX, y + i * 5.5);
+  });
+
+  y += summaryLines.length * 5.5 + 8;
+  hRule(doc, y);
+
+  // Metadata table
+  y += 9;
+  const meta = [
+    ['Scan ID',    scan.id],
+    ['Domain',     scan.domain ?? '—'],
+    ['Started',    scan.created_at ? fmtDateTime(scan.created_at) : '—'],
+    ['Completed',  scan.completed_at ? fmtDateTime(scan.completed_at) : '—'],
+    ['Status',     (scan.status ?? '').toUpperCase()],
+    ['Report Date', fmtDate(new Date().toISOString())],
   ];
-  metaItems.forEach(([label, value], i) => {
+  meta.forEach(([label, value], i) => {
     const col = i % 2;
     const row = Math.floor(i / 2);
-    setColor(doc, C.muted, false);
+    const mx  = MX + col * (CW / 2);
+    rgb(doc, MUTED, false);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.text(label, MARGIN + col * (CW / 2), y + row * 12);
-    setColor(doc, C.text, false);
+    doc.setFontSize(7.5);
+    doc.text(label, mx, y + row * 12);
+    rgb(doc, DARK, false);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text(value, MARGIN + col * (CW / 2), y + row * 12 + 5);
+    doc.setFontSize(8.5);
+    const valLines = doc.splitTextToSize(value ?? '—', CW / 2 - 4) as string[];
+    doc.text(valLines[0], mx, y + row * 12 + 5.5);
   });
 
-  // Footer
-  setColor(doc, C.muted, false);
+  // Page footer
+  rgb(doc, MUTED, false);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
-  doc.text('Generated by Vyzor — vyzor.io', MARGIN, 288);
-  doc.text('CONFIDENTIAL', W - MARGIN, 288, { align: 'right' });
+  doc.text('Generated by Vyzor Security Platform  ·  vyzor.io', MX, 286);
+  doc.text('Page 1', W - MX, 286, { align: 'right' });
+  hRule(doc, 283, MX, W - MX);
 
-  // ── Page 2+: Findings ──────────────────────────────────────────────────────
-  const findings = (scan.findings ?? []).filter((f: { severity?: string }) => f.severity !== 'info');
+  // ────────────────────────────────────────────────────────────────────────────
+  // PAGES 2+  — FINDINGS
+  // ────────────────────────────────────────────────────────────────────────────
+
   if (findings.length === 0) {
     doc.addPage();
-    rect(doc, 0, 0, W, 297, C.bg);
-    rect(doc, 0, 0, W, 18, C.panel);
-    setColor(doc, C.accent, false);
-    doc.setFont('helvetica', 'bold');
+    box(doc, 0, 0, W, 297, WHITE);
+    addWatermark(doc);
+    addFindingsHeader(doc, scan.domain ?? '', 2);
+    rgb(doc, MUTED, false);
+    doc.setFont('helvetica', 'italic');
     doc.setFontSize(10);
-    doc.text('VYZOR', MARGIN, 12);
-    setColor(doc, C.muted, false);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.text('No findings detected.', MARGIN, 40);
+    doc.text('No security findings were detected in this scan.', MX, 60);
+    addPageFooter(doc, 2, scan.domain ?? '');
     doc.save(`vyzor-report-${scan.domain}-${new Date().toISOString().slice(0, 10)}.pdf`);
     return;
   }
 
-  let pageY = 0;
-  const addFindingsPage = () => {
+  let pageY   = 0;
+  let pageNum = 1;
+
+  const newPage = () => {
     doc.addPage();
-    rect(doc, 0, 0, W, 297, C.bg);
-    // Page header
-    rect(doc, 0, 0, W, 18, C.panel);
-    setColor(doc, C.accent, false);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text('VYZOR', MARGIN, 11);
-    setColor(doc, C.muted, false);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.text(`${scan.domain} — Security Report`, W / 2, 11, { align: 'center' });
-    doc.text(`Page ${doc.getNumberOfPages()}`, W - MARGIN, 11, { align: 'right' });
-    pageY = 26;
+    pageNum++;
+    box(doc, 0, 0, W, 297, WHITE);
+    addWatermark(doc);
+    addFindingsHeader(doc, scan.domain ?? '', pageNum);
+    addPageFooter(doc, pageNum, scan.domain ?? '');
+    pageY = 44;
   };
 
-  addFindingsPage();
+  newPage();
 
-  // Findings section title
-  setColor(doc, C.text, false);
+  // Section title
+  rgb(doc, NAVY, false);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text('Findings', MARGIN, pageY);
-  setColor(doc, C.muted, false);
+  doc.setFontSize(12);
+  doc.text('Security Findings', MX, pageY);
+  rgb(doc, MUTED, false);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.text(`${findings.length} issues detected`, MARGIN, pageY + 7);
+  doc.setFontSize(8.5);
+  doc.text(`${findings.length} issue${findings.length !== 1 ? 's' : ''} identified — sorted by severity`, MX, pageY + 6.5);
   pageY += 16;
 
-  // Column headers
-  rect(doc, MARGIN, pageY, CW, 8, C.panel);
-  setColor(doc, C.muted, false);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.5);
-  doc.text('SEVERITY', MARGIN + 2, pageY + 5.5);
-  doc.text('FINDING', MARGIN + 28, pageY + 5.5);
-  doc.text('ASSET', MARGIN + 115, pageY + 5.5);
-  doc.text('CVSS', MARGIN + 157, pageY + 5.5);
-  pageY += 10;
+  hRule(doc, pageY);
+  pageY += 8;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  findings.forEach((f: any) => {
-    const sev = (f.severity ?? 'low').toLowerCase();
-    const sevColor = SEV_COLOR[sev] ?? C.muted;
+  findings.forEach((f, idx) => {
+    const sev     = (f.severity ?? 'low').toLowerCase();
+    const S       = SEV[sev] ?? SEV.low;
+    const source  = (f.source ?? '').toLowerCase() as 'nmap' | 'nuclei';
+    const toolClr = TOOL_COLOR[source] ?? MUTED;
 
-    // Estimate row height
-    const titleLines = doc.splitTextToSize(f.title ?? '', 82) as string[];
-    const descLines = doc.splitTextToSize(f.description ?? '', CW - 4) as string[];
-    const rowH = Math.max(18, titleLines.length * 5 + descLines.slice(0, 2).length * 4 + 10);
+    // Build text lines
+    const titleLines = doc.splitTextToSize(f.title ?? 'Unnamed Finding', CW - 50) as string[];
+    const assetStr   = f.asset ? `${f.asset}${f.port ? ` · Port ${f.port}/tcp` : ''}` : '';
+    const assetLines = doc.splitTextToSize(assetStr, CW - 10) as string[];
 
-    if (pageY + rowH > 278) addFindingsPage();
+    const rawDesc  = (f.description ?? '').replace(/\s+/g, ' ').trim();
+    const descLines = rawDesc ? doc.splitTextToSize(rawDesc, CW - 10) as string[] : [];
+
+    // Evidence line
+    let evidence = '';
+    if (source === 'nmap' && f.port) {
+      const svcMatch = rawDesc.match(/Detected service:\s*(.+?)\.?\s*$/i);
+      evidence = svcMatch ? svcMatch[1] : (assetStr || '');
+    } else if (f.matched_at) {
+      evidence = f.matched_at;
+    } else if (f.template) {
+      evidence = `Template: ${f.template}`;
+    }
+    const evLines = evidence ? doc.splitTextToSize(`Evidence: ${evidence}`, CW - 10) as string[] : [];
+
+    const rawFix  = (f.remediation ?? '').replace(/\s+/g, ' ').trim();
+    const fixLines = rawFix ? doc.splitTextToSize(rawFix, CW - 24) as string[] : [];
+
+    // Row height estimation
+    const innerH =
+      titleLines.length * 5
+      + (assetLines.length > 0 ? assetLines.length * 4 + 3 : 0)
+      + (descLines.length  > 0 ? Math.min(descLines.length, 3) * 4.5 + 4 : 0)
+      + (evLines.length    > 0 ? evLines.length * 4.5 + 3 : 0)
+      + (fixLines.length   > 0 ? Math.min(fixLines.length, 2) * 4.5 + 5 : 0)
+      + 14;  // padding top + bottom
+
+    if (pageY + innerH > 268) newPage();
 
     // Row background
-    rect(doc, MARGIN, pageY, CW, rowH, C.panel, 2);
+    if (idx % 2 === 0) box(doc, MX - 2, pageY - 2, CW + 4, innerH, S.row, 3);
+
+    // Left severity bar
+    box(doc, MX - 2, pageY - 2, 3, innerH, S.pill, 0);
+
+    let ry = pageY + 4;
 
     // Severity pill
-    rect(doc, MARGIN + 2, pageY + 3, 22, 6, sevColor, 2);
-    doc.setTextColor(255, 255, 255);
+    box(doc, MX + 5, ry - 3.5, 20, 6.5, S.pill, 2);
+    rgb(doc, S.text, false);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(5.5);
-    doc.text(sev.toUpperCase(), MARGIN + 13, pageY + 7.5, { align: 'center' });
+    doc.text(S.label, MX + 15, ry + 0.5, { align: 'center' });
 
-    // Title
-    setColor(doc, C.text, false);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    titleLines.slice(0, 2).forEach((line: string, li: number) => {
-      doc.text(line, MARGIN + 28, pageY + 7 + li * 5);
-    });
+    // Tool badge
+    box(doc, MX + 28, ry - 3.5, source ? 14 : 0, 6.5, toolClr, 2);
+    if (source) {
+      rgb(doc, WHITE, false);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(5.5);
+      doc.text(source.toUpperCase(), MX + 35, ry + 0.5, { align: 'center' });
+    }
 
     // CVE tag
     if (f.cve) {
-      setColor(doc, [167, 139, 250] as [number, number, number], false);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6);
-      doc.text(f.cve, MARGIN + 28, pageY + 7 + titleLines.slice(0, 2).length * 5 + 1);
+      box(doc, MX + 45, ry - 3.5, 36, 6.5, [243, 232, 255] as RGB, 2);
+      rgb(doc, [124, 58, 237] as RGB, false);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(5.5);
+      doc.text(f.cve, MX + 63, ry + 0.5, { align: 'center' });
     }
 
-    // Asset
-    setColor(doc, C.muted, false);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
-    const assetText = doc.splitTextToSize(f.asset ?? '', 38) as string[];
-    doc.text(assetText[0] ?? '', MARGIN + 115, pageY + 7);
+    ry += 5;
 
-    // CVSS
-    const cvss = typeof f.cvss === 'number' ? f.cvss.toFixed(1) : '—';
-    setColor(doc, sevColor, false);
+    // Title
+    rgb(doc, NAVY, false);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text(cvss, MARGIN + 162, pageY + 7);
+    doc.setFontSize(9.5);
+    titleLines.forEach((line: string, li: number) => doc.text(line, MX + 5, ry + li * 5));
+    ry += titleLines.length * 5 + 2;
+
+    // Asset + port
+    if (assetLines.length > 0) {
+      rgb(doc, MUTED, false);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      assetLines.forEach((line: string, li: number) => doc.text(line, MX + 5, ry + li * 4));
+      ry += assetLines.length * 4 + 3;
+    }
 
     // Description
-    if (f.description) {
-      setColor(doc, C.muted, false);
+    if (descLines.length > 0) {
+      rgb(doc, BODY, false);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6.5);
-      const dLines = doc.splitTextToSize(f.description, CW - 4) as string[];
-      dLines.slice(0, 2).forEach((line: string, li: number) => {
-        doc.text(line, MARGIN + 2, pageY + titleLines.slice(0, 2).length * 5 + 7 + li * 4);
-      });
+      doc.setFontSize(8);
+      const showLines = descLines.slice(0, 3);
+      showLines.forEach((line: string, li: number) => doc.text(line, MX + 5, ry + li * 4.5));
+      ry += showLines.length * 4.5 + 3;
+    }
+
+    // Evidence
+    if (evLines.length > 0) {
+      rgb(doc, [71, 85, 105] as RGB, false);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.text('Evidence:', MX + 5, ry);
+      rgb(doc, MUTED, false);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      const evText = evLines.join(' ');
+      const evFormatted = doc.splitTextToSize(evText.replace(/^Evidence:\s*/, ''), CW - 30) as string[];
+      evFormatted.slice(0, 2).forEach((line: string, li: number) => doc.text(line, MX + 22, ry + li * 4.5));
+      ry += Math.min(evFormatted.length, 2) * 4.5 + 2;
     }
 
     // Remediation
-    if (f.remediation) {
-      const remY = pageY + rowH - 5;
-      setColor(doc, C.accent, false);
+    if (fixLines.length > 0) {
+      // Tinted band
+      box(doc, MX + 3, ry + 1, CW - 6, Math.min(fixLines.length, 2) * 4.5 + 7, [240, 253, 244] as RGB, 2);
+      rgb(doc, [21, 128, 61] as RGB, false);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(6);
-      doc.text('Fix: ', MARGIN + 2, remY);
-      setColor(doc, C.muted, false);
+      doc.setFontSize(7);
+      doc.text('Fix:', MX + 7, ry + 5.5);
+      rgb(doc, BODY, false);
       doc.setFont('helvetica', 'normal');
-      const remLines = doc.splitTextToSize(f.remediation, CW - 12) as string[];
-      doc.text(remLines[0] ?? '', MARGIN + 10, remY);
+      doc.setFontSize(7.5);
+      fixLines.slice(0, 2).forEach((line: string, li: number) => {
+        doc.text(line, MX + 17, ry + 5.5 + li * 4.5);
+      });
+      ry += Math.min(fixLines.length, 2) * 4.5 + 9;
     }
 
-    pageY += rowH + 3;
+    pageY = ry + 6;
+
+    // Separator
+    if (idx < findings.length - 1) {
+      hRule(doc, pageY - 3);
+    }
   });
 
-  // Footer on last page
-  setColor(doc, C.muted, false);
+  doc.save(`vyzor-report-${scan.domain}-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+// ── Sub-helpers ────────────────────────────────────────────────────────────────
+
+function addFindingsHeader(doc: jsPDF, domain: string, page: number) {
+  const W = 210, MX = 18;
+  box(doc, 0, 0, W, 28, [15, 23, 42] as RGB);
+  rgb(doc, [255, 255, 255] as RGB, false);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('VYZOR', MX, 13);
+  rgb(doc, [148, 163, 184] as RGB, false);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text(`Security Assessment — ${domain}`, W / 2, 13, { align: 'center' });
+  doc.text(`Page ${page}`, W - MX, 13, { align: 'right' });
+  rgb(doc, [100, 116, 139] as RGB, false);
+  doc.setFontSize(7);
+  doc.text('STRICTLY CONFIDENTIAL', W / 2, 22, { align: 'center' });
+}
+
+function addPageFooter(doc: jsPDF, page: number, domain: string) {
+  const W = 210, MX = 18;
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.25);
+  doc.line(MX, 283, W - MX, 283);
+  rgb(doc, [148, 163, 184] as RGB, false);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
-  doc.text('Generated by Vyzor — vyzor.io', MARGIN, 292);
-  doc.text('CONFIDENTIAL', W - MARGIN, 292, { align: 'right' });
-
-  doc.save(`vyzor-report-${scan.domain}-${new Date().toISOString().slice(0, 10)}.pdf`);
+  doc.text(`Vyzor Security Report — ${domain}`, MX, 288);
+  doc.text(`Page ${page}  ·  STRICTLY CONFIDENTIAL`, W - MX, 288, { align: 'right' });
+  void page; // used above
 }
