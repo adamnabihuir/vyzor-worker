@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const GLASS: React.CSSProperties = {
   background: 'rgba(255,255,255,0.07)',
@@ -11,12 +11,6 @@ const GLASS: React.CSSProperties = {
 };
 
 const CONNECTED_INTEGRATIONS = [
-  {
-    name: 'Slack',
-    icon: '💬',
-    description: 'Alerts sent to #security channel',
-    action: 'disconnect',
-  },
   {
     name: 'Jira',
     icon: '🔵',
@@ -68,7 +62,46 @@ export default function IntegrationsPage() {
   const [enabledEvents, setEnabledEvents] = useState<Set<string>>(new Set(['scan.completed', 'vulnerability.critical']));
   const [saved, setSaved] = useState(false);
 
-  const connectedCount = CONNECTED_INTEGRATIONS.filter(i => !disconnected.has(i.name)).length + connected.size;
+  // Slack state
+  const [slackConfigured, setSlackConfigured] = useState(false);
+  const [slackInput, setSlackInput] = useState('');
+  const [slackShowForm, setSlackShowForm] = useState(false);
+  const [slackSaving, setSlackSaving] = useState(false);
+  const [slackErr, setSlackErr] = useState('');
+
+  useEffect(() => {
+    fetch('/api/integrations/slack')
+      .then(r => r.json())
+      .then(d => setSlackConfigured(d.configured))
+      .catch(() => {});
+  }, []);
+
+  const saveSlack = async () => {
+    if (!slackInput.trim()) return;
+    setSlackSaving(true); setSlackErr('');
+    try {
+      const res = await fetch('/api/integrations/slack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ webhookUrl: slackInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setSlackErr(data.error ?? 'Error'); return; }
+      setSlackConfigured(true);
+      setSlackShowForm(false);
+      setSlackInput('');
+    } finally {
+      setSlackSaving(false);
+    }
+  };
+
+  const disconnectSlack = async () => {
+    await fetch('/api/integrations/slack', { method: 'DELETE' });
+    setSlackConfigured(false);
+    setSlackShowForm(false);
+  };
+
+  const connectedCount = CONNECTED_INTEGRATIONS.filter(i => !disconnected.has(i.name)).length + connected.size + (slackConfigured ? 1 : 0);
 
   const handleDisconnect = (name: string) => {
     setDisconnected(prev => new Set([...prev, name]));
@@ -117,6 +150,62 @@ export default function IntegrationsPage() {
           Connected
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          {/* ── Slack — real integration ── */}
+          <div className="rounded-2xl p-5" style={GLASS}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: 'rgba(255,255,255,0.08)' }}>💬</div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm" style={{ color: '#f0fdf4' }}>Slack</p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: slackConfigured ? '#34d399' : 'rgba(148,163,184,0.5)' }} />
+                  <span style={{ color: slackConfigured ? '#34d399' : 'rgba(148,163,184,0.6)', fontSize: '0.7rem', fontWeight: 600 }}>
+                    {slackConfigured ? 'Connected' : 'Not connected'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs mb-4" style={{ color: 'rgba(167,243,208,0.55)', lineHeight: 1.5 }}>
+              {slackConfigured ? 'Scan alerts sent to your Slack workspace.' : 'Receive scan alerts and critical findings in Slack.'}
+            </p>
+
+            {slackShowForm && !slackConfigured && (
+              <div className="mb-3">
+                <input
+                  value={slackInput}
+                  onChange={e => setSlackInput(e.target.value)}
+                  placeholder="https://hooks.slack.com/services/…"
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: `1px solid ${slackErr ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.15)'}`, color: '#f0fdf4', fontSize: '0.72rem', outline: 'none', boxSizing: 'border-box', marginBottom: slackErr ? '4px' : '8px' }}
+                />
+                {slackErr && <p style={{ color: '#ef4444', fontSize: '0.68rem', marginBottom: '6px' }}>{slackErr}</p>}
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button onClick={() => { setSlackShowForm(false); setSlackErr(''); }} style={{ flex: 1, padding: '6px', borderRadius: '7px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(167,243,208,0.6)', fontSize: '0.72rem', cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={saveSlack} disabled={slackSaving} style={{ flex: 1, padding: '6px', borderRadius: '7px', background: '#34d399', color: '#021a12', fontSize: '0.72rem', fontWeight: 700, border: 'none', cursor: 'pointer', opacity: slackSaving ? 0.6 : 1 }}>
+                    {slackSaving ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12 }}>
+              {slackConfigured ? (
+                <button onClick={disconnectSlack} className="w-full py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={{ background: 'rgba(239,68,68,0.08)', color: '#f87171', border: '1px solid rgba(239,68,68,0.15)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.15)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}>
+                  Disconnect
+                </button>
+              ) : (
+                <button onClick={() => setSlackShowForm(true)} className="w-full py-2 rounded-xl text-xs font-bold transition-all"
+                  style={{ background: 'rgba(52,211,153,0.08)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(52,211,153,0.18)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(52,211,153,0.08)')}>
+                  Connect
+                </button>
+              )}
+            </div>
+          </div>
+
           {CONNECTED_INTEGRATIONS.filter(i => !disconnected.has(i.name)).map(integration => (
             <div key={integration.name} className="rounded-2xl p-5" style={GLASS}>
               <div className="flex items-center gap-3 mb-3">

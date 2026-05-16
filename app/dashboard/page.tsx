@@ -16,6 +16,56 @@ const SEVERITY_COLOR: Record<string, string> = {
   critical: '#ef4444', high: '#f59e0b', medium: '#6366f1', low: '#22c55e',
 };
 
+function RiskTrendChart({ points }: { points: { domain: string; date: string; riskScore: number }[] }) {
+  if (points.length < 2) return null;
+
+  const W = 600, H = 90, PAD = 12;
+  const scores = points.map(p => p.riskScore);
+  const minS = 0, maxS = 100;
+  const toX = (i: number) => PAD + (i / (points.length - 1)) * (W - PAD * 2);
+  const toY = (s: number) => PAD + (1 - (s - minS) / (maxS - minS)) * (H - PAD * 2);
+
+  const polyline = points.map((p, i) => `${toX(i)},${toY(p.riskScore)}`).join(' ');
+  const area = `M${toX(0)},${toY(points[0].riskScore)} ` +
+    points.slice(1).map((p, i) => `L${toX(i + 1)},${toY(p.riskScore)}`).join(' ') +
+    ` L${toX(points.length - 1)},${H} L${toX(0)},${H} Z`;
+
+  const last = points[points.length - 1];
+  const lineColor = last.riskScore >= 75 ? '#ef4444' : last.riskScore >= 50 ? '#f59e0b' : last.riskScore >= 25 ? '#6366f1' : '#34d399';
+  const areaColor = last.riskScore >= 75 ? 'rgba(239,68,68,0.08)' : last.riskScore >= 50 ? 'rgba(245,158,11,0.08)' : 'rgba(52,211,153,0.08)';
+
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block' }}>
+      <defs>
+        <linearGradient id="trend-area" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={lineColor} stopOpacity="0.15" />
+          <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {/* Y grid lines */}
+      {[25, 50, 75].map(v => (
+        <line key={v} x1={PAD} y1={toY(v)} x2={W - PAD} y2={toY(v)}
+          stroke="rgba(255,255,255,0.06)" strokeWidth="1" strokeDasharray="3 3" />
+      ))}
+      {/* Area fill */}
+      <path d={area} fill="url(#trend-area)" />
+      {/* Line */}
+      <polyline points={polyline} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      {/* Dots */}
+      {points.map((p, i) => (
+        <circle key={i} cx={toX(i)} cy={toY(p.riskScore)} r="3" fill={lineColor} stroke="rgba(2,26,18,0.8)" strokeWidth="1.5">
+          <title>{p.domain} — {p.riskScore}/100 ({new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })})</title>
+        </circle>
+      ))}
+      {/* Last value label */}
+      <text x={toX(points.length - 1)} y={toY(last.riskScore) - 7}
+        textAnchor="middle" fontSize="10" fontWeight="700" fill={lineColor}>
+        {last.riskScore}
+      </text>
+    </svg>
+  );
+}
+
 const GLASS: React.CSSProperties = {
   background: 'rgba(255,255,255,0.07)',
   backdropFilter: 'blur(18px)',
@@ -54,6 +104,7 @@ export default function DashboardPage() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [recentScans, setRecentScans] = useState<ScanSummary[]>([]);
   const [loadingScans, setLoadingScans] = useState(true);
+  const [trendPoints, setTrendPoints] = useState<{ domain: string; date: string; riskScore: number }[]>([]);
 
   useEffect(() => {
     fetch('/api/scans')
@@ -61,6 +112,11 @@ export default function DashboardPage() {
       .then(data => setRecentScans(data ?? []))
       .catch(() => {})
       .finally(() => setLoadingScans(false));
+
+    fetch('/api/risk-trend')
+      .then(r => r.json())
+      .then(data => Array.isArray(data) && setTrendPoints(data))
+      .catch(() => {});
   }, []);
 
   // Aggregate stats from real scans
@@ -155,6 +211,41 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Risk trend chart */}
+      {trendPoints.length >= 2 && (
+        <div className="rounded-2xl p-5 mb-6" style={GLASS}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <div>
+              <h2 className="font-bold text-sm" style={{ color: '#f0fdf4', margin: 0 }}>Risk Score Trend</h2>
+              <p style={{ color: 'rgba(167,243,208,0.45)', fontSize: '0.75rem', marginTop: '2px' }}>
+                {trendPoints.length} completed scans · hover dots for details
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '14px' }}>
+              {[
+                { label: 'Latest', value: trendPoints[trendPoints.length - 1].riskScore },
+                { label: 'Peak',   value: Math.max(...trendPoints.map(p => p.riskScore)) },
+                { label: 'Best',   value: Math.min(...trendPoints.map(p => p.riskScore)) },
+              ].map(s => (
+                <div key={s.label} style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: '0.65rem', color: 'rgba(167,243,208,0.4)', margin: 0 }}>{s.label}</p>
+                  <p style={{ fontSize: '1rem', fontWeight: 900, color: getRiskColor(s.value), margin: 0 }}>{s.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <RiskTrendChart points={trendPoints} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+            <span style={{ fontSize: '0.65rem', color: 'rgba(167,243,208,0.3)' }}>
+              {new Date(trendPoints[0].date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+            </span>
+            <span style={{ fontSize: '0.65rem', color: 'rgba(167,243,208,0.3)' }}>
+              {new Date(trendPoints[trendPoints.length - 1].date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="grid xl:grid-cols-3 gap-6">
         {/* LEFT COLUMN */}

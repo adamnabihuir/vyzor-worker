@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { Resend } from 'resend';
+import { clerkClient } from '@clerk/nextjs/server';
 
 const NOTIFY_SECRET = process.env.NOTIFY_SECRET ?? '';
+
+async function sendSlack(webhookUrl: string, payload: Record<string, unknown>) {
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error('[notify] Slack error:', err);
+  }
+}
 
 export async function POST(req: NextRequest) {
   // Worker must send X-Notify-Secret header to prevent abuse
@@ -17,7 +30,7 @@ export async function POST(req: NextRequest) {
   const supabase = getSupabaseAdmin();
   const { data: scan, error } = await supabase
     .from('scans')
-    .select('domain, status, stats, findings')
+    .select('domain, status, stats, findings, user_id')
     .eq('id', scanId)
     .single();
 
@@ -103,8 +116,53 @@ export async function POST(req: NextRequest) {
 
   if (emailErr) {
     console.error('[notify] Resend error:', emailErr);
-    return NextResponse.json({ error: 'Email send failed', detail: JSON.stringify(emailErr) }, { status: 500 });
   }
 
-  return NextResponse.json({ sent: true, to: toEmail });
+  // ── Slack notification ────────────────────────────────────────────────────
+  try {
+    if (scan.user_id) {
+      const clerk = await clerkClient();
+      const user  = await clerk.users.getUser(scan.user_id);
+      const meta  = user.publicMetadata as { integrations?: { slack?: { webhookUrl: string } } };
+      const slackUrl = meta?.integrations?.slack?.webhookUrl;
+
+      if (slackUrl) {
+        const riskEmoji = riskScore >= 75 ? '🔴' : riskScore >= 50 ? '🟠' : riskScore >= 25 ? '🟡' : '🟢';
+        const statusEmoji = scan.status === 'completed' ? '✅' : '❌';
+        await sendSlack(slackUrl, {
+          blocks: [
+            {
+              type: 'header',
+              text: { type: 'plain_text', text: `${statusEmoji} Vyzor scan ${scan.status === 'completed' ? 'completed' : 'failed'}`, emoji: true },
+            },
+            {
+              type: 'section',
+              fields: [
+                { type: 'mrkdwn', text: `*Domain*\n\`${scan.domain}\`` },
+                { type: 'mrkdwn', text: `*Risk Score*\n${riskEmoji} ${riskScore}/100` },
+                { type: 'mrkdwn', text: `*Critical*\n${v.critical}` },
+                { type: 'mrkdwn', text: `*High*\n${v.high}` },
+                { type: 'mrkdwn', text: `*Medium*\n${v.medium}` },
+                { type: 'mrkdwn', text: `*Total findings*\n${total}` },
+              ],
+            },
+            {
+              type: 'actions',
+              elements: [{
+                type: 'button',
+                text: { type: 'plain_text', text: 'View report →', emoji: true },
+                url: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://vanguard-blond-delta.vercel.app'}/dashboard/scans/${scanId}`,
+                style: 'primary',
+              }],
+            },
+          ],
+        });
+      }
+    }
+  } catch (slackErr) {
+    console.error('[notify] Slack lookup error:', slackErr);
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
+  return NextResponse.json({ sent: !emailErr, to: toEmail });
 }
