@@ -3,7 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const BASE_URL = "https://vanguard-blond-delta.vercel.app";
+const BASE_URL = "https://vektorasm.me";
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),

@@ -68,7 +68,7 @@ export default function OnboardingPage() {
             {[
               'Continuous attack surface monitoring',
               'Automated vulnerability scanning',
-              '49,000+ security checks',
+              '9,000+ Nuclei scan templates',
               'Real-time CVE alerts',
               'Detailed remediation reports',
               'Cancel anytime, no commitment',

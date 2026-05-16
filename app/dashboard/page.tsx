@@ -152,10 +152,12 @@ export default function DashboardPage() {
     color: s.status === 'completed' ? '#34d399' : s.status === 'failed' ? '#ef4444' : '#6366f1',
   }));
 
+  const [notVerified, setNotVerified] = useState<string | null>(null);
+
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!domain.trim() || scanning) return;
-    setScanning(true); setScanError(null);
+    setScanning(true); setScanError(null); setNotVerified(null);
     try {
       const res = await fetch('/api/scan/start', {
         method: 'POST',
@@ -164,6 +166,11 @@ export default function DashboardPage() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Failed to queue scan' }));
+        if (err.notVerified) {
+          setNotVerified(err.domain ?? domain.trim());
+          setScanning(false);
+          return;
+        }
         throw new Error(err.error ?? 'Failed to queue scan');
       }
       const { scanId } = await res.json();
@@ -356,6 +363,21 @@ export default function DashboardPage() {
                   : 'Scan now'}
               </button>
             </form>
+            {notVerified && (
+              <div className="mt-4 px-4 py-3 rounded-xl flex items-center justify-between gap-3" style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)' }}>
+                <div className="flex items-center gap-3">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span className="text-sm font-semibold" style={{ color: '#fbbf24' }}>
+                    <span className="font-mono">{notVerified}</span> is not verified — you must prove ownership first.
+                  </span>
+                </div>
+                <Link href={`/dashboard/domains/add`}
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap flex-shrink-0"
+                  style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
+                  Verify domain →
+                </Link>
+              </div>
+            )}
             {scanError && (
               <div className="mt-4 px-4 py-3 rounded-xl flex items-center gap-3" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>

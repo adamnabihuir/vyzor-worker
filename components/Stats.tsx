@@ -1,7 +1,7 @@
 const STATS = [
   { value: '<60s', label: 'Time to first finding', sub: 'from scan initiation to results' },
   { value: '3+', label: 'Scan engines', sub: 'subfinder · nmap · nuclei' },
-  { value: '99.97%', label: 'Platform uptime', sub: 'monitored continuously' },
+  { value: '24/7', label: 'Threat monitoring', sub: 'continuous scan scheduling' },
   { value: '14d', label: 'Free trial', sub: 'no credit card required' },
 ];
 

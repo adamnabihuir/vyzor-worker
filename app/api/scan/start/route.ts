@@ -57,6 +57,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid domain format' }, { status: 400 });
     }
 
+    // ── Domain ownership verification gate ────────────────────────────────────
+    const { data: verifiedDomains } = await supabase
+      .from('domain_verifications')
+      .select('domain')
+      .eq('user_id', userId)
+      .eq('status', 'verified')
+      .gt('expires_at', new Date().toISOString());
+
+    const isVerified = (verifiedDomains ?? []).some(
+      (v) => clean === v.domain || clean.endsWith(`.${v.domain}`)
+    );
+
+    if (!isVerified) {
+      return NextResponse.json(
+        {
+          error: 'Domain not verified. You must prove ownership before scanning.',
+          verifyUrl: '/dashboard/domains/add',
+          domain: clean,
+          notVerified: true,
+        },
+        { status: 403 }
+      );
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const { data, error } = await supabase
       .from('scans')
       .insert({ domain: clean, user_id: userId })

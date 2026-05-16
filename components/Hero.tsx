@@ -43,16 +43,22 @@ export default function Hero() {
 
           {/* Left: copy */}
           <div>
-            {/* Pill badge */}
-            <a href="#features" className="inline-flex items-center gap-2 mb-8 px-4 py-1.5 rounded-full text-sm font-semibold transition-all"
-              style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(52,211,153,0.14)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(52,211,153,0.08)'}
-            >
-              <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: '#34d399' }} />
-              New: Emerging Threat Scans now live
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </a>
+            {/* Badges row */}
+            <div className="flex flex-wrap items-center gap-2 mb-8">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold"
+                style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
+                <span className="w-1.5 h-1.5 rounded-full inline-block animate-pulse" style={{ background: '#fbbf24' }} />
+                Beta — Limited Access
+              </span>
+              <a href="#features" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold transition-all"
+                style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(52,211,153,0.14)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(52,211,153,0.08)'}
+              >
+                New: Emerging Threat Scans
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </a>
+            </div>
 
             {/* Decorative accent dots */}
             <div className="flex items-center gap-2 mb-4">

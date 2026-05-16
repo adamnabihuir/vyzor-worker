@@ -19,7 +19,7 @@ const PLANS = [
     features: [
       'Daily scheduled scans',
       'Unlimited ad hoc scans',
-      'Vyzor Proprietary Engine',
+      'Powered by Nuclei, nmap & subfinder',
       'Unlimited users',
       'Email alerts',
       'PDF reports',
@@ -63,7 +63,7 @@ const PLANS = [
     pricePerExtra: 25,
     popular: false,
     ctaLabel: 'Talk to sales',
-    ctaHref: 'mailto:sales@vyzor.io',
+    ctaHref: 'mailto:sales@vektorasm.me',
     ctaVariant: 'outline' as const,
     features: [
       'Everything in Cloud',
@@ -87,7 +87,7 @@ const PLANS = [
     pricePerExtra: null,
     popular: false,
     ctaLabel: 'Talk to sales',
-    ctaHref: 'mailto:sales@vyzor.io',
+    ctaHref: 'mailto:sales@vektorasm.me',
     ctaVariant: 'outline' as const,
     features: [
       'Everything in Pro',
@@ -99,7 +99,7 @@ const PLANS = [
       'SLA 99.9% uptime',
       'SSO / SAML',
       'On-premise option',
-      'ISO 27001 / NIS2 reports',
+      'ISO 27001 / NIS2 compliance report templates',
     ],
     notIncluded: [],
   },
@@ -387,8 +387,8 @@ export default function Pricing() {
 
         {/* Footer */}
         <p className="text-center mt-10" style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-          All plans include unlimited users · SOC 2 Type II · GDPR compliant ·{' '}
-          <a href="mailto:sales@vyzor.io"
+          All plans include unlimited users · GDPR-aligned · TLS 1.3 encrypted ·{' '}
+          <a href="mailto:sales@vektorasm.me"
             style={{ color: '#34d399', textDecoration: 'none', fontWeight: 600 }}
             onMouseEnter={e => (e.currentTarget.style.color = '#6ee7b7')}
             onMouseLeave={e => (e.currentTarget.style.color = '#34d399')}>

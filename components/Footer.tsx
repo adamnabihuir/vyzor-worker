@@ -11,13 +11,14 @@ const LINKS = {
     { label: 'Start free trial', href: '/auth/register' },
   ],
   Company: [
+    { label: 'About', href: '/about' },
     { label: 'Contact us', href: 'mailto:hello@vektorasm.me' },
     { label: 'Privacy Policy', href: '/privacy' },
     { label: 'Terms of Service', href: '/terms' },
   ],
   Security: [
     { label: 'Vulnerability Disclosure', href: 'mailto:security@vektorasm.me' },
-    { label: 'SOC 2 (coming soon)', href: '#' },
+    { label: 'Security Policy', href: 'mailto:security@vektorasm.me' },
     { label: 'GDPR Compliance', href: '/privacy' },
   ],
 };

@@ -77,10 +77,10 @@ export default function CTA() {
         {/* Trust badges */}
         <div className="flex flex-wrap items-center justify-center gap-4">
           {[
-            { icon: '🔒', text: 'SOC 2 Type II' },
-            { icon: '🇪🇺', text: 'GDPR Compliant' },
-            { icon: '⚡', text: '99.97% Uptime' },
-            { icon: '🛡️', text: 'ISO 27001 Ready' },
+            { icon: '🔐', text: 'GDPR-aligned' },
+            { icon: '🔒', text: 'TLS 1.3 encrypted' },
+            { icon: '📋', text: 'SOC 2 in progress' },
+            { icon: '🛡️', text: 'Scan authorization required' },
           ].map((badge, i) => (
             <div key={i} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm"
               style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', border: '1px solid rgba(255,255,255,0.13)', boxShadow: '0 4px 28px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)' }}>

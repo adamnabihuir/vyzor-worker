@@ -1,111 +1,164 @@
-import Link from 'next/link';
-import Logo from '@/components/Logo';
+export const metadata = {
+  title: 'Terms of Service | Vyzor',
+  description: 'Terms of Service for Vyzor — Attack Surface Management platform.',
+};
 
-export const metadata = { title: 'Terms of Service — Vyzor' };
-
-const SECTION = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <section style={{ marginBottom: '2.5rem' }}>
-    <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f0fdf4', marginBottom: '0.75rem' }}>{title}</h2>
-    <div style={{ color: 'rgba(167,243,208,0.75)', fontSize: '0.92rem', lineHeight: '1.8' }}>{children}</div>
-  </section>
-);
+const LAST_UPDATED = 'May 16, 2026';
 
 export default function TermsPage() {
   return (
-    <main style={{ background: '#021a12', minHeight: '100vh' }}>
-      <nav style={{ borderBottom: '1px solid rgba(52,211,153,0.1)', padding: '1rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/"><Logo size={24} /></Link>
-        <Link href="/" style={{ color: 'rgba(167,243,208,0.6)', fontSize: '0.85rem', textDecoration: 'none' }}>← Back to home</Link>
-      </nav>
-
-      <div style={{ maxWidth: '720px', margin: '0 auto', padding: '4rem 2rem 6rem' }}>
-        <div style={{ marginBottom: '3rem' }}>
-          <span style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399', fontSize: '0.75rem', fontWeight: 700, padding: '4px 12px', borderRadius: '999px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-            Legal
-          </span>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#f0fdf4', marginTop: '1rem', marginBottom: '0.5rem' }}>Terms of Service</h1>
-          <p style={{ color: 'rgba(167,243,208,0.5)', fontSize: '0.875rem' }}>Last updated: 16 May 2026</p>
+    <div className="min-h-screen" style={{ background: '#05050f', color: '#f0fdf4' }}>
+      <div className="max-w-3xl mx-auto px-6 py-20">
+        <div className="mb-12">
+          <a href="/" className="text-sm font-semibold mb-8 inline-flex items-center gap-2"
+            style={{ color: 'rgba(167,243,208,0.5)' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>
+            Back to home
+          </a>
+          <h1 className="font-black text-4xl mt-6 mb-3" style={{ color: '#f0fdf4' }}>Terms of Service</h1>
+          <p style={{ color: 'rgba(167,243,208,0.5)', fontSize: '0.9rem' }}>Last updated: {LAST_UPDATED}</p>
         </div>
 
-        <SECTION title="1. Acceptance of terms">
-          <p>By accessing or using the Vyzor platform (&quot;Service&quot;), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service. These terms apply to all users, including trial and paid subscribers.</p>
-        </SECTION>
+        <div style={{ lineHeight: 1.8 }}>
 
-        <SECTION title="2. Description of service">
-          <p>Vyzor provides an automated attack surface management platform that discovers internet-facing assets, scans for vulnerabilities, and delivers prioritised security findings. The Service includes web dashboard access, API access, and scan reporting.</p>
-        </SECTION>
+          <section className="mb-10">
+            <p style={{ color: 'rgba(167,243,208,0.7)', fontSize: '0.95rem' }}>
+              These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Vyzor platform (&quot;Service&quot;), operated by Vyzor Security (&quot;Vyzor&quot;, &quot;we&quot;, &quot;us&quot;). By accessing or using the Service, you agree to these Terms. If you disagree, do not use the Service.
+            </p>
+          </section>
 
-        <SECTION title="3. Account registration">
-          <ul style={{ listStyle: 'disc', paddingLeft: '1.5rem' }}>
-            <li>You must provide accurate information when creating an account.</li>
-            <li>You are responsible for maintaining the security of your account credentials.</li>
-            <li>You must be at least 18 years old to use the Service.</li>
-            <li>One person or legal entity may not maintain more than one free trial account.</li>
-          </ul>
-        </SECTION>
+          <Section title="1. Authorization Warranty — Scanning">
+            <p>
+              <strong style={{ color: '#f0fdf4' }}>You warrant and represent</strong> that you own each domain you submit for scanning, or that you have obtained explicit, documented written authorization from the legal owner to perform security scanning on that domain and its associated infrastructure.
+            </p>
+            <p>
+              Vyzor enforces domain ownership verification via DNS TXT records. By completing verification and initiating a scan, you:
+            </p>
+            <ul>
+              <li>Confirm that you are authorized to scan the submitted target.</li>
+              <li>Accept sole legal responsibility for any consequences resulting from unauthorized scanning.</li>
+              <li>Agree to indemnify and hold harmless Vyzor, its founders, employees, officers, and affiliates from any and all claims, damages, penalties, or legal proceedings arising from your unauthorized use of the Service.</li>
+            </ul>
+            <p>
+              Unauthorized scanning may violate the Computer Fraud and Abuse Act (CFAA), the EU Network and Information Systems Directive (NIS2), Moroccan Law No. 07-03, and equivalent laws in your jurisdiction. Vyzor cooperates fully with law enforcement investigations.
+            </p>
+          </Section>
 
-        <SECTION title="4. Acceptable use">
-          <p>You agree to use Vyzor only to scan domains and assets that you own or have explicit written authorisation to test. You must not:</p>
-          <ul style={{ listStyle: 'disc', paddingLeft: '1.5rem', marginTop: '0.75rem' }}>
-            <li>Scan domains or IP addresses you do not own or are not authorised to test</li>
-            <li>Use the Service for any illegal purpose</li>
-            <li>Attempt to overload or disrupt the Service or third-party systems</li>
-            <li>Reverse-engineer or extract our scanning algorithms or infrastructure</li>
-            <li>Resell or sublicense access to the Service without prior written agreement</li>
-          </ul>
-          <p style={{ marginTop: '0.75rem' }}>Violations may result in immediate account suspension and reporting to relevant authorities.</p>
-        </SECTION>
+          <Section title="2. Service Description & Limitations">
+            <p>
+              Vyzor provides automated security scanning powered by open-source tools (subfinder, nmap, nuclei) and proprietary orchestration logic. The Service identifies potential security issues, vulnerabilities, and misconfigurations based on automated analysis.
+            </p>
+            <p>
+              <strong style={{ color: '#f0fdf4' }}>Important limitations:</strong>
+            </p>
+            <ul>
+              <li>No automated tool detects 100% of security vulnerabilities. Vyzor findings are informational and should be treated as a starting point for security analysis.</li>
+              <li>Vyzor results are not a substitute for professional penetration testing conducted by qualified security professionals.</li>
+              <li>Vyzor does not guarantee the detection of any specific vulnerability or class of vulnerabilities.</li>
+              <li>CVSS scores and risk ratings are computed automatically and may differ from a human expert&apos;s assessment.</li>
+            </ul>
+          </Section>
 
-        <SECTION title="5. Free trial">
-          <p>New accounts receive a 14-day free trial with full access to the Service. No credit card is required to start the trial. At the end of the trial period, your account will be downgraded unless you subscribe to a paid plan. Trial data is retained for 30 days after trial expiry.</p>
-        </SECTION>
+          <Section title="3. Acceptable Use">
+            <p>You agree not to use the Service to:</p>
+            <ul>
+              <li>Scan domains, IP addresses, or infrastructure you do not own or are not explicitly authorized to test.</li>
+              <li>Target critical infrastructure (power grids, hospitals, water systems, financial systems) without explicit written government authorization.</li>
+              <li>Intentionally cause denial of service, data loss, or disruption to target systems.</li>
+              <li>Reverse engineer Vyzor&apos;s scanning techniques, algorithms, or templates for the purpose of creating a competing service.</li>
+              <li>Share, resell, or sub-license your account access or results without prior written consent from Vyzor.</li>
+              <li>Use the Service for any unlawful purpose or in violation of any applicable laws or regulations.</li>
+              <li>Attempt to circumvent rate limits, usage quotas, or scan authorization mechanisms.</li>
+            </ul>
+            <p>Violation of these terms will result in immediate account termination and may be reported to relevant authorities.</p>
+          </Section>
 
-        <SECTION title="6. Payments and billing">
-          <ul style={{ listStyle: 'disc', paddingLeft: '1.5rem' }}>
-            <li>Subscriptions are billed monthly or annually in advance.</li>
-            <li>All prices are in USD and exclude applicable taxes.</li>
-            <li>Payments are processed securely by Stripe, Inc.</li>
-            <li>Failed payments may result in service suspension after a 7-day grace period.</li>
-            <li>You can cancel your subscription at any time from the billing settings.</li>
-          </ul>
-        </SECTION>
+          <Section title="4. Free Trial & Subscriptions">
+            <p>
+              Vyzor offers a 14-day free trial with full feature access. No credit card is required to start a trial. At the end of the trial period, continued access requires a paid subscription.
+            </p>
+            <p>
+              Subscriptions are billed monthly or annually in advance. Annual subscriptions receive a 20% discount. All prices are exclusive of applicable taxes (TVA, VAT, GST) which will be added where required by law.
+            </p>
+            <p>
+              You may cancel your subscription at any time from the Settings page. Cancellation takes effect at the end of your current billing period. No partial refunds are issued for unused portions of a billing period.
+            </p>
+          </Section>
 
-        <SECTION title="7. Cancellation and refunds">
-          <p>You may cancel your subscription at any time. Cancellation takes effect at the end of the current billing period. We do not provide refunds for partial periods. If you believe you were charged in error, contact <a href="mailto:billing@vektorasm.me" style={{ color: '#34d399' }}>billing@vektorasm.me</a> within 14 days.</p>
-        </SECTION>
+          <Section title="5. Limitation of Liability">
+            <p>
+              To the maximum extent permitted by applicable law, Vyzor&apos;s total aggregate liability to you for all claims arising out of or relating to these Terms or the Service is limited to the fees paid by you in the twelve (12) months immediately preceding the event giving rise to liability.
+            </p>
+            <p>
+              Vyzor is not liable for any indirect, incidental, special, consequential, or exemplary damages, including but not limited to: loss of profits, loss of data, loss of business, or business interruption, even if Vyzor has been advised of the possibility of such damages.
+            </p>
+          </Section>
 
-        <SECTION title="8. Data and confidentiality">
-          <p>Your scan data and findings are private and visible only to your account. We do not share your scan results with third parties. See our <Link href="/privacy" style={{ color: '#34d399' }}>Privacy Policy</Link> for full details on how we handle your data.</p>
-        </SECTION>
+          <Section title="6. Data Handling & Security">
+            <ul>
+              <li>Scan data is encrypted in transit using TLS 1.3 and at rest using AES-256.</li>
+              <li>Sensitive finding details are encrypted at the application level.</li>
+              <li>Data retention: scan data is retained for 12 months after subscription termination, then permanently deleted.</li>
+              <li>We do not sell, share, or rent customer data to third parties.</li>
+              <li>GDPR data subject requests (access, rectification, erasure, portability): <a href="mailto:privacy@vektorasm.me" style={{ color: '#34d399' }}>privacy@vektorasm.me</a></li>
+              <li>Security vulnerability disclosure: <a href="mailto:security@vektorasm.me" style={{ color: '#34d399' }}>security@vektorasm.me</a></li>
+            </ul>
+          </Section>
 
-        <SECTION title="9. Limitation of liability">
-          <p>The Service is provided &quot;as is&quot; without warranty of any kind. Vyzor does not guarantee that scans will detect all vulnerabilities. Security findings are provided for informational purposes and do not constitute legal or professional security advice.</p>
-          <p style={{ marginTop: '0.75rem' }}>To the maximum extent permitted by law, Vyzor&apos;s total liability for any claim arising out of these Terms shall not exceed the fees paid by you in the 12 months preceding the claim.</p>
-        </SECTION>
+          <Section title="7. Intellectual Property">
+            <p>
+              Vyzor and its licensors retain all rights, title, and interest in the Service. You receive a limited, non-exclusive, non-transferable license to use the Service for its intended purpose during your subscription.
+            </p>
+            <p>
+              Scan results generated from your domains remain your property. You grant Vyzor a license to use anonymized, aggregated scan data to improve the Service.
+            </p>
+          </Section>
 
-        <SECTION title="10. Intellectual property">
-          <p>The Vyzor name, logo, platform, and all underlying technology are the intellectual property of Vyzor Security. Nothing in these Terms grants you any right to use our trademarks or proprietary technology beyond what is needed to use the Service.</p>
-        </SECTION>
+          <Section title="8. Beta Features">
+            <p>
+              Features marked as &quot;Beta&quot; are provided as-is with no guarantees of stability, accuracy, or continued availability. Beta features may be modified or discontinued at any time without notice.
+            </p>
+          </Section>
 
-        <SECTION title="11. Termination">
-          <p>We reserve the right to suspend or terminate your account if you violate these Terms. You may delete your account at any time from the Settings page. Upon termination, your data will be deleted within 30 days.</p>
-        </SECTION>
+          <Section title="9. Modifications to Terms">
+            <p>
+              Vyzor reserves the right to modify these Terms at any time. We will notify you of material changes by email or in-app notification at least 14 days before the changes take effect. Continued use of the Service after the effective date constitutes acceptance of the modified Terms.
+            </p>
+          </Section>
 
-        <SECTION title="12. Changes to terms">
-          <p>We may update these Terms from time to time. We will notify you of material changes by email at least 14 days in advance. Continued use of the Service after changes constitutes acceptance.</p>
-        </SECTION>
+          <Section title="10. Termination">
+            <p>
+              Vyzor may suspend or terminate your account immediately, without prior notice, if you violate these Terms — in particular the authorization warranty in Section 1. Upon termination, your right to access the Service ceases immediately.
+            </p>
+          </Section>
 
-        <SECTION title="13. Governing law">
-          <p>These Terms are governed by applicable law. Any disputes shall be resolved through binding arbitration, except where prohibited by law.</p>
-        </SECTION>
+          <Section title="11. Governing Law">
+            <p>
+              These Terms are governed by the laws of the Kingdom of Morocco. Disputes shall first be attempted to be resolved through good-faith negotiation. If unresolved after 30 days, disputes shall be submitted to the competent courts of Rabat, Morocco.
+            </p>
+          </Section>
 
-        <div style={{ marginTop: '3rem', padding: '1.5rem', borderRadius: '16px', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)' }}>
-          <p style={{ color: 'rgba(167,243,208,0.7)', fontSize: '0.875rem' }}>
-            Questions about these terms? Email us at{' '}
-            <a href="mailto:legal@vektorasm.me" style={{ color: '#34d399', fontWeight: 600 }}>legal@vektorasm.me</a>
-          </p>
+          <section className="mt-12 pt-8" style={{ borderTop: '1px solid rgba(52,211,153,0.1)' }}>
+            <p style={{ color: 'rgba(167,243,208,0.5)', fontSize: '0.85rem' }}>
+              Questions about these Terms?{' '}
+              <a href="mailto:legal@vektorasm.me" style={{ color: '#34d399' }}>legal@vektorasm.me</a>
+            </p>
+          </section>
+
         </div>
       </div>
-    </main>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mb-10">
+      <h2 className="font-black text-lg mb-4" style={{ color: '#34d399' }}>{title}</h2>
+      <div style={{ color: 'rgba(167,243,208,0.7)', fontSize: '0.95rem' }}
+        className="space-y-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5">
+        {children}
+      </div>
+    </section>
   );
 }
