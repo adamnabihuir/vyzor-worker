@@ -15,12 +15,12 @@ export const PLANS = {
   starter: {
     name: 'Starter',
     priceId: process.env.STRIPE_STARTER_PRICE_ID!,
-    amount: 12900,
+    amount: 7000,
   },
   growth: {
     name: 'Growth',
     priceId: process.env.STRIPE_GROWTH_PRICE_ID!,
-    amount: 24900,
+    amount: 14900,
   },
 } as const;
 

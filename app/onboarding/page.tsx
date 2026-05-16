@@ -186,10 +186,10 @@ export default function OnboardingPage() {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <p className="font-black text-base" style={{ color: '#0f172a' }}>Starter</p>
-                      <p className="text-xs" style={{ color: '#64748b' }}>Up to 10 targets · 49K+ checks</p>
+                      <p className="text-xs" style={{ color: '#64748b' }}>Up to 5 targets · subfinder + nmap + nuclei</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-black text-xl" style={{ color: '#6366f1' }}>$129</p>
+                      <p className="font-black text-xl" style={{ color: '#6366f1' }}>$70</p>
                       <p className="text-xs" style={{ color: '#94a3b8' }}>/month after trial</p>
                     </div>
                   </div>
@@ -205,10 +205,10 @@ export default function OnboardingPage() {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <p className="font-black text-base" style={{ color: '#0f172a' }}>Growth</p>
-                      <p className="text-xs" style={{ color: '#64748b' }}>Up to 25 targets · Everything in Starter</p>
+                      <p className="text-xs" style={{ color: '#64748b' }}>Up to 10 targets · Everything in Starter</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-black text-xl" style={{ color: '#0f172a' }}>$249</p>
+                      <p className="font-black text-xl" style={{ color: '#0f172a' }}>$149</p>
                       <p className="text-xs" style={{ color: '#94a3b8' }}>/month after trial</p>
                     </div>
                   </div>
