@@ -11,12 +11,12 @@ const LINKS = {
     { label: 'Start free trial', href: '/auth/register' },
   ],
   Company: [
-    { label: 'Contact us', href: 'mailto:hello@vyzor.io' },
+    { label: 'Contact us', href: 'mailto:hello@vektorasm.me' },
     { label: 'Privacy Policy', href: '/privacy' },
     { label: 'Terms of Service', href: '/terms' },
   ],
   Security: [
-    { label: 'Vulnerability Disclosure', href: 'mailto:security@vyzor.io' },
+    { label: 'Vulnerability Disclosure', href: 'mailto:security@vektorasm.me' },
     { label: 'SOC 2 (coming soon)', href: '#' },
     { label: 'GDPR Compliance', href: '/privacy' },
   ],
@@ -37,10 +37,10 @@ export default function Footer() {
               The attack surface management platform built for modern security teams.
             </p>
             <div className="flex items-center gap-3 mt-4">
-              <a href="mailto:hello@vyzor.io"
+              <a href="mailto:hello@vektorasm.me"
                 className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"
                 style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.15)', color: '#34d399' }}>
-                hello@vyzor.io
+                hello@vektorasm.me
               </a>
             </div>
           </div>
@@ -79,7 +79,7 @@ export default function Footer() {
             {[
               { label: 'Privacy Policy', href: '/privacy' },
               { label: 'Terms of Service', href: '/terms' },
-              { label: 'Contact', href: 'mailto:hello@vyzor.io' },
+              { label: 'Contact', href: 'mailto:hello@vektorasm.me' },
             ].map((item) => (
               <Link key={item.label} href={item.href}
                 className="transition-colors duration-150"

@@ -83,7 +83,7 @@ export default function FAQ() {
         <div className="mt-10 text-center">
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
             Still have questions?{' '}
-            <a href="mailto:hello@vyzor.io" style={{ color: '#34d399', fontWeight: 600 }}>Email us →</a>
+            <a href="mailto:hello@vektorasm.me" style={{ color: '#34d399', fontWeight: 600 }}>Email us →</a>
           </p>
         </div>
       </div>

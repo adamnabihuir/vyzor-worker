@@ -71,7 +71,7 @@ export default function TermsPage() {
         </SECTION>
 
         <SECTION title="7. Cancellation and refunds">
-          <p>You may cancel your subscription at any time. Cancellation takes effect at the end of the current billing period. We do not provide refunds for partial periods. If you believe you were charged in error, contact <a href="mailto:billing@vyzor.io" style={{ color: '#34d399' }}>billing@vyzor.io</a> within 14 days.</p>
+          <p>You may cancel your subscription at any time. Cancellation takes effect at the end of the current billing period. We do not provide refunds for partial periods. If you believe you were charged in error, contact <a href="mailto:billing@vektorasm.me" style={{ color: '#34d399' }}>billing@vektorasm.me</a> within 14 days.</p>
         </SECTION>
 
         <SECTION title="8. Data and confidentiality">
@@ -102,7 +102,7 @@ export default function TermsPage() {
         <div style={{ marginTop: '3rem', padding: '1.5rem', borderRadius: '16px', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)' }}>
           <p style={{ color: 'rgba(167,243,208,0.7)', fontSize: '0.875rem' }}>
             Questions about these terms? Email us at{' '}
-            <a href="mailto:legal@vyzor.io" style={{ color: '#34d399', fontWeight: 600 }}>legal@vyzor.io</a>
+            <a href="mailto:legal@vektorasm.me" style={{ color: '#34d399', fontWeight: 600 }}>legal@vektorasm.me</a>
           </p>
         </div>
       </div>

@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
     if (email) {
       await resend.emails.send({
-        from: 'Vyzor <hello@vyzor.io>',
+        from: 'Vyzor <onboarding@resend.dev>',
         to: email,
         subject: 'Welcome to Vyzor — your free trial starts now',
         html: `
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div style="display:flex;align-items:flex-start;gap:12px;">
           <span style="background:#34d399;color:#021a12;font-weight:900;font-size:0.7rem;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:20px;text-align:center;">1</span>
-          <p style="color:rgba(167,243,208,0.8);font-size:0.875rem;margin:0;line-height:1.5;">Go to your <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://vyzor.io'}/dashboard" style="color:#34d399;">dashboard</a> and enter your domain</p>
+          <p style="color:rgba(167,243,208,0.8);font-size:0.875rem;margin:0;line-height:1.5;">Go to your <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://vektorasm.me'}/dashboard" style="color:#34d399;">dashboard</a> and enter your domain</p>
         </div>
         <div style="display:flex;align-items:flex-start;gap:12px;">
           <span style="background:#34d399;color:#021a12;font-weight:900;font-size:0.7rem;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:20px;text-align:center;">2</span>
@@ -76,13 +76,13 @@ export async function POST(req: Request) {
       </div>
     </div>
 
-    <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://vyzor.io'}/dashboard"
+    <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://vektorasm.me'}/dashboard"
       style="display:inline-block;background:#34d399;color:#021a12;font-weight:800;font-size:0.9rem;padding:14px 28px;border-radius:12px;text-decoration:none;">
       Go to Dashboard →
     </a>
 
     <p style="color:rgba(167,243,208,0.4);font-size:0.78rem;margin-top:32px;line-height:1.6;">
-      Questions? Reply to this email or contact us at <a href="mailto:hello@vyzor.io" style="color:#34d399;">hello@vyzor.io</a><br/>
+      Questions? Reply to this email or contact us at <a href="mailto:hello@vektorasm.me" style="color:#34d399;">hello@vektorasm.me</a><br/>
       Vyzor Security · Your trial ends in 14 days
     </p>
   </div>

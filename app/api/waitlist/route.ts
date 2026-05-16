@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL ?? 'adam@vanguard.io';
-const FROM_EMAIL   = process.env.FROM_EMAIL   ?? 'waitlist@vyzor.io';
+const FROM_EMAIL   = process.env.FROM_EMAIL   ?? 'waitlist@vektorasm.me';
 
 export async function POST(req: NextRequest) {
   try {

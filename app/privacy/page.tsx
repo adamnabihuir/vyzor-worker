@@ -29,8 +29,8 @@ export default function PrivacyPage() {
         </div>
 
         <SECTION title="1. Who we are">
-          <p>Vyzor Security (&quot;Vyzor&quot;, &quot;we&quot;, &quot;our&quot;) operates the Vyzor attack surface management platform available at vyzor.io. This Privacy Policy explains how we collect, use, and protect your personal data when you use our services.</p>
-          <p style={{ marginTop: '0.75rem' }}>For questions, contact us at: <a href="mailto:privacy@vyzor.io" style={{ color: '#34d399' }}>privacy@vyzor.io</a></p>
+          <p>Vyzor Security (&quot;Vyzor&quot;, &quot;we&quot;, &quot;our&quot;) operates the Vyzor attack surface management platform available at vektorasm.me. This Privacy Policy explains how we collect, use, and protect your personal data when you use our services.</p>
+          <p style={{ marginTop: '0.75rem' }}>For questions, contact us at: <a href="mailto:privacy@vektorasm.me" style={{ color: '#34d399' }}>privacy@vektorasm.me</a></p>
         </SECTION>
 
         <SECTION title="2. What data we collect">
@@ -64,7 +64,7 @@ export default function PrivacyPage() {
         </SECTION>
 
         <SECTION title="5. Data retention">
-          <p>We retain your account data as long as your account is active. Scan data is retained for 12 months after the scan date. You may request deletion of your data at any time by contacting <a href="mailto:privacy@vyzor.io" style={{ color: '#34d399' }}>privacy@vyzor.io</a>.</p>
+          <p>We retain your account data as long as your account is active. Scan data is retained for 12 months after the scan date. You may request deletion of your data at any time by contacting <a href="mailto:privacy@vektorasm.me" style={{ color: '#34d399' }}>privacy@vektorasm.me</a>.</p>
         </SECTION>
 
         <SECTION title="6. Security">
@@ -80,7 +80,7 @@ export default function PrivacyPage() {
             <li>Object to processing or request restriction</li>
             <li>Data portability</li>
           </ul>
-          <p style={{ marginTop: '0.75rem' }}>To exercise these rights, email <a href="mailto:privacy@vyzor.io" style={{ color: '#34d399' }}>privacy@vyzor.io</a>. We will respond within 30 days.</p>
+          <p style={{ marginTop: '0.75rem' }}>To exercise these rights, email <a href="mailto:privacy@vektorasm.me" style={{ color: '#34d399' }}>privacy@vektorasm.me</a>. We will respond within 30 days.</p>
         </SECTION>
 
         <SECTION title="8. Cookies">
@@ -94,7 +94,7 @@ export default function PrivacyPage() {
         <div style={{ marginTop: '3rem', padding: '1.5rem', borderRadius: '16px', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)' }}>
           <p style={{ color: 'rgba(167,243,208,0.7)', fontSize: '0.875rem' }}>
             Questions about this policy? Email us at{' '}
-            <a href="mailto:privacy@vyzor.io" style={{ color: '#34d399', fontWeight: 600 }}>privacy@vyzor.io</a>
+            <a href="mailto:privacy@vektorasm.me" style={{ color: '#34d399', fontWeight: 600 }}>privacy@vektorasm.me</a>
           </p>
         </div>
       </div>
