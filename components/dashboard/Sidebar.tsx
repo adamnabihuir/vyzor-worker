@@ -58,16 +58,18 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
         )}
         <button
           onClick={onToggle}
+          title="Toggle sidebar"
           className="flex items-center justify-center rounded-lg transition-all flex-shrink-0"
           style={{
-            width: 30, height: 30,
-            background: 'rgba(52,211,153,0.06)',
-            color: 'rgba(167,243,208,0.5)',
+            width: 28, height: 28,
+            background: 'rgba(52,211,153,0.15)',
+            color: '#34d399',
+            border: '1px solid rgba(52,211,153,0.3)',
             marginLeft: collapsed ? 'auto' : 0,
             marginRight: collapsed ? 'auto' : 0,
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(52,211,153,0.12)'; e.currentTarget.style.color = '#34d399'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(52,211,153,0.06)'; e.currentTarget.style.color = 'rgba(167,243,208,0.5)'; }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(52,211,153,0.25)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(52,211,153,0.15)'; }}
         >
           {collapsed ? (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
