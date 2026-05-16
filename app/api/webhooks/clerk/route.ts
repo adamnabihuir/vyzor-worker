@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
     if (email) {
       await resend.emails.send({
-        from: 'Vyzor <onboarding@resend.dev>',
+        from: 'Vyzor <hello@vektorasm.me>',
         to: email,
         subject: 'Welcome to Vyzor — your free trial starts now',
         html: `
