@@ -96,19 +96,19 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
               style={{
                 padding: collapsed ? '8px 0' : '8px 12px',
                 justifyContent: collapsed ? 'center' : 'flex-start',
-                background: active ? 'rgba(52,211,153,0.12)' : 'transparent',
-                color: active ? '#34d399' : 'rgba(167,243,208,0.55)',
+                background: active ? 'rgba(52,211,153,0.15)' : 'transparent',
+                color: active ? '#ffffff' : 'rgba(255,255,255,0.55)',
               }}
-              onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(52,211,153,0.06)'; }}
-              onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+              onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)'; } }}
+              onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; } }}
             >
-              <span style={{ opacity: active ? 1 : 0.7, flexShrink: 0 }}>{item.icon}</span>
+              <span style={{ opacity: active ? 1 : 0.6, flexShrink: 0 }}>{item.icon}</span>
               {!collapsed && (
                 <span className="flex-1 whitespace-nowrap">{item.label}</span>
               )}
               {!collapsed && item.badge && (
                 <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
-                  style={{ background: `${item.badgeColor}20`, color: item.badgeColor }}>
+                  style={{ background: `${item.badgeColor}25`, color: item.badgeColor }}>
                   {item.badge}
                 </span>
               )}
@@ -130,13 +130,13 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
               style={{
                 padding: collapsed ? '8px 0' : '8px 12px',
                 justifyContent: collapsed ? 'center' : 'flex-start',
-                background: active ? 'rgba(52,211,153,0.12)' : 'transparent',
-                color: active ? '#34d399' : 'rgba(167,243,208,0.55)',
+                background: active ? 'rgba(52,211,153,0.15)' : 'transparent',
+                color: active ? '#ffffff' : 'rgba(255,255,255,0.55)',
               }}
-              onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(52,211,153,0.06)'; }}
-              onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+              onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)'; } }}
+              onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; } }}
             >
-              <span style={{ opacity: active ? 1 : 0.7, flexShrink: 0 }}>{item.icon}</span>
+              <span style={{ opacity: active ? 1 : 0.6, flexShrink: 0 }}>{item.icon}</span>
               {!collapsed && <span className="flex-1 whitespace-nowrap">{item.label}</span>}
             </Link>
           );
@@ -158,12 +158,12 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
             <>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold truncate" style={{ color: '#f0fdf4' }}>{displayName}</p>
-                <p className="text-xs truncate" style={{ color: 'rgba(167,243,208,0.45)' }}>{displayEmail}</p>
+                <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.45)' }}>{displayEmail}</p>
               </div>
               <button onClick={() => signOut(() => router.push('/auth/login'))}
-                style={{ color: 'rgba(167,243,208,0.4)' }}
+                style={{ color: 'rgba(255,255,255,0.4)' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                onMouseLeave={e => e.currentTarget.style.color = 'rgba(167,243,208,0.4)'}>
+                onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
                 </svg>
