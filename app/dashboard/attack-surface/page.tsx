@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const GLASS: React.CSSProperties = {
   background: 'rgba(255,255,255,0.07)',
@@ -10,74 +10,47 @@ const GLASS: React.CSSProperties = {
   boxShadow: '0 4px 28px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)',
 };
 
-const RISK_COLOR: Record<string, string> = {
-  Critical: '#ef4444',
-  High: '#f59e0b',
-  Medium: '#3b82f6',
-  Low: '#34d399',
+const SEV_COLOR: Record<string, string> = {
+  critical: '#ef4444',
+  high:     '#f59e0b',
+  medium:   '#6366f1',
+  low:      '#34d399',
+  info:     '#94a3b8',
 };
 
-const CATEGORIES = [
-  {
-    icon: '🌐',
-    name: 'Web & APIs',
-    assets: 89,
-    issues: 4,
-    score: 71,
-    risk: 'High',
-  },
-  {
-    icon: '☁️',
-    name: 'Cloud Infrastructure',
-    assets: 34,
-    issues: 2,
-    score: 61,
-    risk: 'Medium',
-  },
-  {
-    icon: '🔌',
-    name: 'Network & Ports',
-    assets: 12,
-    issues: 3,
-    score: 78,
-    risk: 'High',
-    assetLabel: 'open ports',
-  },
-  {
-    icon: '🔒',
-    name: 'Certificates & DNS',
-    assets: 8,
-    issues: 1,
-    score: 45,
-    risk: 'Medium',
-    assetLabel: 'expiring soon',
-  },
-];
+type Asset = { host: string; scanDomain: string; firstSeen: string };
+type Port  = { host: string; port: number; service: string; severity: string };
+type Finding = {
+  id: string; title: string; severity: string; asset: string;
+  port?: number; source: string; scanDomain: string; discovered: string;
+};
+type Stats = { assetsDiscovered: number; portsScanned: number; riskScore: number; vulnerabilities: { critical: number; high: number; medium: number; low: number } };
+type SurfaceData = {
+  assets: Asset[]; ports: Port[];
+  stats: Stats; totalVulns: { critical: number; high: number; medium: number; low: number };
+  recentFindings: Finding[]; totalScans: number;
+};
 
-const TIMELINE = [
-  { color: '#34d399', dot: '🟢', label: 'New subdomain discovered: api-v2.acmecorp.com', time: '2h ago' },
-  { color: '#ef4444', dot: '🔴', label: 'Critical: S3 bucket publicly accessible', time: '5h ago' },
-  { color: '#f59e0b', dot: '🟡', label: 'SSL cert expiring in 7 days: mail.acmecorp.com', time: '1d ago' },
-  { color: '#34d399', dot: '🟢', label: '3 new assets mapped on techstart.io', time: '1d ago' },
-  { color: '#3b82f6', dot: '🔵', label: 'Port 3389 detected open on admin.acmecorp.com', time: '2d ago' },
-  { color: '#34d399', dot: '🟢', label: 'New CDN asset: cdn2.acmecorp.com', time: '3d ago' },
-  { color: '#34d399', dot: '✅', label: 'Issue resolved: HTTP redirect on www', time: '4d ago' },
-  { color: '#f59e0b', dot: '🟡', label: 'New dev environment: beta.techstart.io', time: '5d ago' },
-];
+function riskLabel(score: number) {
+  if (score <= 20) return { label: 'Low Risk',      color: '#34d399' };
+  if (score <= 40) return { label: 'Medium Risk',   color: '#6366f1' };
+  if (score <= 60) return { label: 'Elevated Risk', color: '#f59e0b' };
+  if (score <= 80) return { label: 'High Risk',     color: '#f59e0b' };
+  return                  { label: 'Critical Risk', color: '#ef4444' };
+}
 
-const EXPOSED = [
-  { port: '3389', service: 'RDP', host: 'admin.acmecorp.com', risk: 'Critical' },
-  { port: '8080', service: 'HTTP-Alt', host: 'admin.acmecorp.com', risk: 'High' },
-  { port: '587', service: 'SMTP', host: 'mail.acmecorp.com', risk: 'Medium' },
-  { port: '3000', service: 'Dev server', host: 'dev.acmecorp.com', risk: 'Medium' },
-  { port: '8443', service: 'HTTPS-Alt', host: 'dashboard.techstart.io', risk: 'Low' },
-];
+function fmtAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const h = Math.floor(diff / 3600000);
+  if (h < 1) return 'Just now';
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return d === 1 ? '1d ago' : `${d}d ago`;
+}
 
 function GaugeArc({ score }: { score: number }) {
   const pct = score / 100;
-  const r = 54;
-  const cx = 70;
-  const cy = 70;
+  const r = 54, cx = 70, cy = 70;
   const startAngle = Math.PI;
   const endAngle = startAngle + pct * Math.PI;
   const x1 = cx + r * Math.cos(startAngle);
@@ -85,205 +58,253 @@ function GaugeArc({ score }: { score: number }) {
   const x2 = cx + r * Math.cos(endAngle);
   const y2 = cy + r * Math.sin(endAngle);
   const largeArc = pct > 0.5 ? 1 : 0;
+  const { color } = riskLabel(score);
 
   return (
     <svg width="140" height="80" viewBox="0 0 140 80">
-      {/* Track */}
-      <path
-        d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
-        fill="none"
-        stroke="rgba(255,255,255,0.08)"
-        strokeWidth="10"
-        strokeLinecap="round"
-      />
-      {/* Fill */}
-      <path
-        d={`M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`}
-        fill="none"
-        stroke="#f59e0b"
-        strokeWidth="10"
-        strokeLinecap="round"
-      />
-      {/* Score */}
+      <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
+        fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="10" strokeLinecap="round" />
+      <path d={`M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`}
+        fill="none" stroke={color} strokeWidth="10" strokeLinecap="round" />
       <text x={cx} y={cy - 6} textAnchor="middle" fill="#f0fdf4" fontSize="22" fontWeight="900">{score}</text>
       <text x={cx} y={cy + 10} textAnchor="middle" fill="rgba(167,243,208,0.55)" fontSize="10">/100</text>
     </svg>
   );
 }
 
-function ExposureBar({ label, pct, color }: { label: string; pct: number; color: string }) {
-  return (
-    <div className="mb-4">
-      <div className="flex justify-between mb-1.5">
-        <span style={{ color: 'rgba(167,243,208,0.55)', fontSize: '0.8rem' }}>{label}</span>
-        <span style={{ color: '#f0fdf4', fontSize: '0.8rem', fontWeight: 700 }}>{pct}%</span>
-      </div>
-      <div className="rounded-full overflow-hidden" style={{ height: 6, background: 'rgba(255,255,255,0.08)' }}>
-        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
-      </div>
-    </div>
-  );
-}
-
 export default function AttackSurfacePage() {
-  const [_refresh, setRefresh] = useState(false);
+  const [data, setData] = useState<SurfaceData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [tab, setTab] = useState<'assets' | 'ports'>('assets');
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/attack-surface');
+      if (res.ok) setData(await res.json());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const score = data?.stats?.riskScore ?? 0;
+  const { label: rLabel, color: rColor } = riskLabel(score);
+  const totalAssets = data?.assets.length ?? 0;
+  const totalPorts  = data?.ports.length  ?? 0;
+  const v = data?.totalVulns ?? { critical: 0, high: 0, medium: 0, low: 0 };
+  const totalIssues = v.critical + v.high + v.medium + v.low;
+
+  const filteredAssets = (data?.assets ?? []).filter(a =>
+    a.host.toLowerCase().includes(search.toLowerCase())
+  );
+  const filteredPorts = (data?.ports ?? []).filter(p =>
+    p.host.toLowerCase().includes(search.toLowerCase()) ||
+    String(p.port).includes(search) ||
+    p.service.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const isEmpty = !loading && data && totalAssets === 0 && totalPorts === 0;
 
   return (
-    <div className="p-8" style={{ minHeight: '100vh' }}>
+    <div style={{ padding: '32px', minHeight: '100vh' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 className="font-black text-2xl mb-1" style={{ color: '#f0fdf4' }}>Attack Surface</h1>
-          <p style={{ color: 'rgba(167,243,208,0.55)', fontSize: '0.875rem' }}>Monitor and manage your complete external attack surface</p>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#f0fdf4', margin: 0 }}>Attack Surface</h1>
+          <p style={{ color: 'rgba(167,243,208,0.55)', fontSize: '0.875rem', marginTop: '4px' }}>
+            {loading ? 'Loading…' : data ? `${totalAssets} assets · ${totalPorts} open ports · ${data.totalScans} scans` : 'Monitor your external attack surface'}
+          </p>
         </div>
         <button
-          onClick={() => setRefresh(v => !v)}
-          className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl transition-all"
-          style={{ background: '#34d399', color: '#021a12' }}
-          onMouseEnter={e => (e.currentTarget.style.background = '#2ec48a')}
-          onMouseLeave={e => (e.currentTarget.style.background = '#34d399')}
+          onClick={load}
+          style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '9px 18px', borderRadius: '10px', background: '#34d399', color: '#021a12', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer' }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <polyline points="1 4 1 10 7 10"/>
-            <path d="M3.51 15a9 9 0 1 0 .49-3.1"/>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.1"/>
           </svg>
-          Run full discovery
+          Refresh
         </button>
       </div>
 
+      {isEmpty && (
+        <div style={{ ...GLASS, borderRadius: '16px', padding: '48px', textAlign: 'center', marginBottom: '24px' }}>
+          <p style={{ fontSize: '2rem', marginBottom: '12px' }}>🔍</p>
+          <p style={{ color: '#f0fdf4', fontWeight: 700, marginBottom: '6px' }}>No data yet</p>
+          <p style={{ color: 'rgba(167,243,208,0.5)', fontSize: '0.85rem' }}>Run a scan first — your attack surface will appear here automatically.</p>
+        </div>
+      )}
+
       {/* Risk overview */}
-      <div className="rounded-2xl p-6 mb-6" style={GLASS}>
-        <h2 className="font-bold text-sm mb-5 uppercase tracking-wide" style={{ color: 'rgba(167,243,208,0.4)' }}>Risk Overview</h2>
-        <div className="grid grid-cols-3 gap-8">
-          {/* Score gauge */}
-          <div className="flex flex-col items-center justify-center">
-            <GaugeArc score={74} />
-            <div className="mt-2 text-center">
-              <div className="font-black text-lg" style={{ color: '#f59e0b' }}>High Risk</div>
-              <div style={{ color: 'rgba(167,243,208,0.55)', fontSize: '0.8rem' }}>Overall score: 74/100</div>
-            </div>
-          </div>
-
-          {/* Exposure bars */}
-          <div className="flex flex-col justify-center">
-            <p className="font-bold text-sm mb-4" style={{ color: '#f0fdf4' }}>Exposure Breakdown</p>
-            <ExposureBar label="External exposure" pct={82} color="#ef4444" />
-            <ExposureBar label="Internal exposure" pct={23} color="#3b82f6" />
-            <ExposureBar label="Cloud exposure" pct={61} color="#f59e0b" />
-          </div>
-
-          {/* Trend */}
-          <div className="flex flex-col justify-center gap-3 pl-6" style={{ borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
-            <p className="font-bold text-sm mb-1" style={{ color: '#f0fdf4' }}>This Week</p>
-            {[
-              { icon: '↑', text: '3 new assets this week', color: '#f59e0b' },
-              { icon: '↓', text: '2 issues resolved', color: '#34d399' },
-              { icon: '→', text: '0 new critical', color: 'rgba(167,243,208,0.55)' },
-            ].map(item => (
-              <div key={item.text} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0" style={{ background: 'rgba(255,255,255,0.06)', color: item.color }}>{item.icon}</div>
-                <span style={{ color: 'rgba(167,243,208,0.7)', fontSize: '0.8rem' }}>{item.text}</span>
+      {!isEmpty && (
+        <div style={{ ...GLASS, borderRadius: '16px', padding: '24px', marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(167,243,208,0.4)', marginBottom: '20px' }}>Risk Overview</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 1fr', gap: '32px' }}>
+            {/* Gauge */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              {loading ? (
+                <div style={{ width: 140, height: 80, background: 'rgba(255,255,255,0.04)', borderRadius: '8px' }} />
+              ) : (
+                <GaugeArc score={score} />
+              )}
+              <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                <p style={{ fontWeight: 900, fontSize: '1rem', color: rColor, margin: 0 }}>{rLabel}</p>
+                <p style={{ color: 'rgba(167,243,208,0.55)', fontSize: '0.75rem' }}>Overall score: {score}/100</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Category cards 2x2 */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        {CATEGORIES.map(cat => (
-          <div key={cat.name} className="rounded-2xl p-5" style={GLASS}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ background: 'rgba(255,255,255,0.07)' }}>
-                  {cat.icon}
-                </div>
-                <div>
-                  <p className="font-bold text-sm" style={{ color: '#f0fdf4' }}>{cat.name}</p>
-                  <p style={{ color: 'rgba(167,243,208,0.55)', fontSize: '0.75rem' }}>
-                    {cat.assets} {cat.assetLabel ?? 'assets'} · {cat.issues} issue{cat.issues !== 1 ? 's' : ''}
-                  </p>
-                </div>
-              </div>
-              <span className="text-xs font-bold px-2.5 py-1 rounded-lg" style={{ background: `${RISK_COLOR[cat.risk]}20`, color: RISK_COLOR[cat.risk] }}>
-                {cat.risk}
-              </span>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="rounded-full overflow-hidden flex-1" style={{ height: 5, background: 'rgba(255,255,255,0.08)', width: 120 }}>
-                    <div style={{ height: '100%', width: `${cat.score}%`, background: RISK_COLOR[cat.risk], borderRadius: 9999 }} />
+
+            {/* Stats */}
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '10px' }}>
+              {[
+                { label: 'Subdomains discovered', value: totalAssets, color: '#f0fdf4' },
+                { label: 'Open ports',            value: totalPorts,  color: '#f0fdf4' },
+                { label: 'Total findings',         value: totalIssues, color: totalIssues > 0 ? '#f59e0b' : '#34d399' },
+              ].map(s => (
+                <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'rgba(167,243,208,0.6)' }}>{s.label}</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: s.color }}>{loading ? '—' : s.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Severity counts */}
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '8px', paddingLeft: '24px', borderLeft: '1px solid rgba(255,255,255,0.08)' }}>
+              {(['critical', 'high', 'medium', 'low'] as const).map(sev => {
+                const count = v[sev];
+                const total = totalIssues || 1;
+                return (
+                  <div key={sev} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: SEV_COLOR[sev], width: '56px' }}>{sev}</span>
+                    <div style={{ flex: 1, height: 5, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.round(count / total * 100)}%`, background: SEV_COLOR[sev], borderRadius: 999 }} />
+                    </div>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: count > 0 ? SEV_COLOR[sev] : 'rgba(167,243,208,0.3)', width: '24px', textAlign: 'right' }}>{count}</span>
                   </div>
-                  <span style={{ color: RISK_COLOR[cat.risk], fontSize: '0.75rem', fontWeight: 700 }}>{cat.score}/100</span>
-                </div>
-              </div>
-              <button className="text-xs font-semibold transition-all" style={{ color: '#34d399' }}
-                onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-                onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}>
-                View details →
-              </button>
+                );
+              })}
             </div>
           </div>
-        ))}
-      </div>
-
-      {/* Bottom row */}
-      <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 380px' }}>
-        {/* Timeline */}
-        <div className="rounded-2xl p-6" style={GLASS}>
-          <h2 className="font-bold text-sm mb-5" style={{ color: '#f0fdf4' }}>Recent Changes</h2>
-          <div className="space-y-0">
-            {TIMELINE.map((item, i) => (
-              <div key={i} className="flex gap-4 pb-4">
-                <div className="flex flex-col items-center gap-0">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0 mt-0.5" style={{ background: item.color }} />
-                  {i < TIMELINE.length - 1 && (
-                    <div style={{ width: 1, flex: 1, background: 'rgba(255,255,255,0.08)', marginTop: 4 }} />
-                  )}
-                </div>
-                <div className="flex-1 pb-0">
-                  <p style={{ color: 'rgba(167,243,208,0.8)', fontSize: '0.8rem', lineHeight: 1.5 }}>{item.label}</p>
-                  <p style={{ color: 'rgba(167,243,208,0.4)', fontSize: '0.7rem', marginTop: 2 }}>{item.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
+      )}
 
-        {/* Exposed services */}
-        <div className="rounded-2xl p-6" style={GLASS}>
-          <h2 className="font-bold text-sm mb-5" style={{ color: '#f0fdf4' }}>Most Exposed Services</h2>
-          {/* Table header */}
-          <div className="grid mb-2" style={{ gridTemplateColumns: '60px 90px 1fr 80px' }}>
-            {['Port', 'Service', 'Host', 'Risk'].map(h => (
-              <span key={h} style={{ color: 'rgba(167,243,208,0.4)', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
-            ))}
-          </div>
-          <div className="space-y-1">
-            {EXPOSED.map((svc, i) => (
-              <div
-                key={i}
-                className="grid py-2.5 px-2 rounded-lg"
-                style={{
-                  gridTemplateColumns: '60px 90px 1fr 80px',
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}
-              >
-                <span className="font-mono text-xs font-bold" style={{ color: '#f0fdf4' }}>{svc.port}</span>
-                <span className="text-xs" style={{ color: 'rgba(167,243,208,0.7)' }}>{svc.service}</span>
-                <span className="font-mono text-xs truncate" style={{ color: 'rgba(167,243,208,0.55)' }}>{svc.host}</span>
-                <span>
-                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-md" style={{ background: `${RISK_COLOR[svc.risk]}20`, color: RISK_COLOR[svc.risk] }}>
-                    {svc.risk}
+      {/* Main content */}
+      {!isEmpty && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px' }}>
+          {/* Assets / Ports table */}
+          <div style={{ ...GLASS, borderRadius: '16px', overflow: 'hidden' }}>
+            {/* Tabs + search */}
+            <div style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', gap: '16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              {(['assets', 'ports'] as const).map(t => (
+                <button key={t} onClick={() => setTab(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', fontSize: '0.875rem', fontWeight: 700, color: tab === t ? '#34d399' : 'rgba(167,243,208,0.45)', borderBottom: tab === t ? '2px solid #34d399' : '2px solid transparent', paddingBottom: '4px' }}>
+                  {t === 'assets' ? `Subdomains (${totalAssets})` : `Open Ports (${totalPorts})`}
+                </button>
+              ))}
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(167,243,208,0.4)" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search…"
+                  style={{ background: 'none', border: 'none', outline: 'none', color: '#f0fdf4', fontSize: '0.8rem', width: '140px' }}
+                />
+              </div>
+            </div>
+
+            {/* Table header */}
+            {tab === 'assets' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 120px', padding: '8px 20px', background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                {['Host', 'Root domain', 'First seen'].map(h => (
+                  <span key={h} style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(167,243,208,0.4)' }}>{h}</span>
+                ))}
+              </div>
+            )}
+            {tab === 'ports' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr 160px 90px', padding: '8px 20px', background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                {['Port', 'Service', 'Host', 'Severity'].map(h => (
+                  <span key={h} style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(167,243,208,0.4)' }}>{h}</span>
+                ))}
+              </div>
+            )}
+
+            {/* Rows */}
+            <div style={{ maxHeight: '460px', overflowY: 'auto' }}>
+              {loading && (
+                <div style={{ padding: '32px', textAlign: 'center' }}>
+                  <p style={{ color: 'rgba(167,243,208,0.4)', fontSize: '0.85rem' }}>Loading…</p>
+                </div>
+              )}
+
+              {tab === 'assets' && !loading && filteredAssets.map((a, i) => (
+                <div key={a.host} style={{ display: 'grid', gridTemplateColumns: '1fr 160px 120px', padding: '10px 20px', borderBottom: i < filteredAssets.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', alignItems: 'center', background: 'rgba(255,255,255,0.018)' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#f0fdf4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.host}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'rgba(167,243,208,0.55)' }}>{a.scanDomain}</span>
+                  <span style={{ fontSize: '0.72rem', color: 'rgba(167,243,208,0.4)' }}>{fmtAgo(a.firstSeen)}</span>
+                </div>
+              ))}
+
+              {tab === 'ports' && !loading && filteredPorts.map((p, i) => (
+                <div key={`${p.host}:${p.port}`} style={{ display: 'grid', gridTemplateColumns: '70px 1fr 160px 90px', padding: '10px 20px', borderBottom: i < filteredPorts.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', alignItems: 'center', background: 'rgba(255,255,255,0.018)' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', fontWeight: 700, color: '#f0fdf4' }}>{p.port}/tcp</span>
+                  <span style={{ fontSize: '0.8rem', color: 'rgba(167,243,208,0.7)' }}>{p.service}</span>
+                  <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'rgba(167,243,208,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.host}</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', background: `${SEV_COLOR[p.severity] ?? SEV_COLOR.info}20`, color: SEV_COLOR[p.severity] ?? SEV_COLOR.info, display: 'inline-block' }}>
+                    {p.severity.charAt(0).toUpperCase() + p.severity.slice(1)}
                   </span>
-                </span>
-              </div>
-            ))}
+                </div>
+              ))}
+
+              {!loading && tab === 'assets' && filteredAssets.length === 0 && (
+                <div style={{ padding: '28px', textAlign: 'center' }}>
+                  <p style={{ color: 'rgba(167,243,208,0.4)', fontSize: '0.85rem' }}>No assets found</p>
+                </div>
+              )}
+              {!loading && tab === 'ports' && filteredPorts.length === 0 && (
+                <div style={{ padding: '28px', textAlign: 'center' }}>
+                  <p style={{ color: 'rgba(167,243,208,0.4)', fontSize: '0.85rem' }}>No open ports found</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Recent changes feed */}
+          <div style={{ ...GLASS, borderRadius: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <h2 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#f0fdf4', margin: 0 }}>Recent Findings</h2>
+            </div>
+            <div style={{ overflowY: 'auto', maxHeight: '520px' }}>
+              {loading && (
+                <div style={{ padding: '28px', textAlign: 'center' }}>
+                  <p style={{ color: 'rgba(167,243,208,0.4)', fontSize: '0.85rem' }}>Loading…</p>
+                </div>
+              )}
+              {!loading && (data?.recentFindings ?? []).length === 0 && (
+                <div style={{ padding: '28px', textAlign: 'center' }}>
+                  <p style={{ color: 'rgba(167,243,208,0.4)', fontSize: '0.85rem' }}>No findings yet</p>
+                </div>
+              )}
+              {!loading && (data?.recentFindings ?? []).map((f, i) => (
+                <div key={f.id ?? i} style={{ display: 'flex', gap: '12px', padding: '12px 18px', borderBottom: i < (data?.recentFindings.length ?? 0) - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: SEV_COLOR[f.severity] ?? SEV_COLOR.info, flexShrink: 0, marginTop: '4px' }} />
+                    {i < (data?.recentFindings.length ?? 0) - 1 && (
+                      <div style={{ width: 1, flex: 1, background: 'rgba(255,255,255,0.07)', marginTop: '4px' }} />
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: '0.78rem', color: 'rgba(167,243,208,0.85)', lineHeight: 1.4, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.title}</p>
+                    <p style={{ fontSize: '0.68rem', color: 'rgba(167,243,208,0.4)', marginTop: '2px' }}>{f.asset} · {fmtAgo(f.discovered)}</p>
+                  </div>
+                  <span style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', color: SEV_COLOR[f.severity] ?? SEV_COLOR.info, flexShrink: 0 }}>
+                    {f.severity}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

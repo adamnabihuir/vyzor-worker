@@ -48,10 +48,13 @@ const DEMO_SCANS: DemoScan[] = [
   { id: 'scan_006', name: 'Monthly full scan', type: 'Balanced', targets: '4 targets', issues: 23, date: '1 Apr 02:00' },
 ];
 
-const SCHEDULED = [
-  { name: 'Weekly scan', cron: 'Repeats weekly', targets: 'All targets', next: '21 May 2026 02:00' },
-  { name: 'Monthly full scan', cron: 'Repeats monthly', targets: 'All targets', next: '1 Jun 2026 02:00' },
-];
+type Schedule = {
+  id: string;
+  domain: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  next_run: string;
+  created_at: string;
+};
 
 const ETS_CHECKS = [
   { cve: 'CVE-2021-44228', name: 'Log4Shell', date: '3 May 2026', result: '2 critical', critical: true },
@@ -101,6 +104,11 @@ export default function ScansPage() {
   const [copied, setCopied] = useState(false);
   const [realScans, setRealScans] = useState<RealScan[]>([]);
   const [loadingScans, setLoadingScans] = useState(true);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [sched, setSched] = useState({ domain: '', frequency: 'weekly' });
+  const [saving, setSaving] = useState(false);
+  const [diffs, setDiffs] = useState<Record<string, { newTotal: number; fixedTotal: number; newCritical: number }>>({});
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const IPS = '18.98.162.96/29, 64.52.19.0/24, 18.168.180.128/25, 18.168.224.128/25';
@@ -109,18 +117,61 @@ export default function ScansPage() {
     try {
       const res = await fetch('/api/scans');
       if (res.ok) {
-        const data = await res.json();
+        const data: RealScan[] = await res.json();
         setRealScans(data);
+        // Fetch diffs for completed scans in background
+        const completed = data.filter(s => s.status === 'completed');
+        completed.forEach(async (scan) => {
+          try {
+            const dr = await fetch(`/api/scan/${scan.id}/diff`);
+            if (dr.ok) {
+              const d = await dr.json();
+              if (d.hasPrevious) {
+                setDiffs(prev => ({ ...prev, [scan.id]: { newTotal: d.newTotal, fixedTotal: d.fixedTotal, newCritical: d.newCritical } }));
+              }
+            }
+          } catch { /* ignore */ }
+        });
       }
-    } catch {
-      // silently ignore
-    } finally {
+    } catch { /* ignore */ } finally {
       setLoadingScans(false);
     }
   };
 
+  const fetchSchedules = async () => {
+    try {
+      const res = await fetch('/api/schedules');
+      if (res.ok) setSchedules(await res.json());
+    } catch { /* ignore */ }
+  };
+
+  const createSchedule = async () => {
+    if (!sched.domain) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: sched.domain, frequency: sched.frequency }),
+      });
+      if (res.ok) {
+        await fetchSchedules();
+        setShowModal(false);
+        setSched({ domain: '', frequency: 'weekly' });
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteSchedule = async (id: string) => {
+    await fetch(`/api/schedules/${id}`, { method: 'DELETE' });
+    setSchedules(prev => prev.filter(s => s.id !== id));
+  };
+
   useEffect(() => {
     fetchScans();
+    fetchSchedules();
     intervalRef.current = setInterval(fetchScans, 5000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -148,7 +199,7 @@ export default function ScansPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#f0fdf4', margin: 0 }}>Scans</h1>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '9px 16px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(167,243,208,0.7)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
+          <button onClick={() => setShowModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '9px 16px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(167,243,208,0.7)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="4" width="18" height="18" rx="2" />
               <line x1="16" y1="2" x2="16" y2="6" />
@@ -276,7 +327,7 @@ export default function ScansPage() {
 
                     <span style={{ fontSize: '0.8rem', color: 'rgba(167,243,208,0.6)' }}>{subdomains}</span>
 
-                    <span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                       {issues === 0 ? (
                         <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
@@ -286,6 +337,16 @@ export default function ScansPage() {
                         <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444' }}>{critCount} critical</span>
                       ) : (
                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f0fdf4' }}>{issues}</span>
+                      )}
+                      {diffs[scan.id]?.newTotal > 0 && (
+                        <span title={`${diffs[scan.id].newTotal} new vs previous scan`} style={{ fontSize: '0.65rem', fontWeight: 700, color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: '999px', border: '1px solid rgba(245,158,11,0.2)' }}>
+                          +{diffs[scan.id].newTotal} new
+                        </span>
+                      )}
+                      {diffs[scan.id]?.fixedTotal > 0 && (
+                        <span title={`${diffs[scan.id].fixedTotal} fixed vs previous scan`} style={{ fontSize: '0.65rem', fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.1)', padding: '1px 6px', borderRadius: '999px', border: '1px solid rgba(52,211,153,0.2)' }}>
+                          -{diffs[scan.id].fixedTotal} fixed
+                        </span>
                       )}
                     </span>
 
@@ -346,18 +407,30 @@ export default function ScansPage() {
             <div style={{ ...GLASS, borderRadius: '16px', overflow: 'hidden' }}>
               <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <h2 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#f0fdf4', margin: 0 }}>Scheduled</h2>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, background: 'rgba(52,211,153,0.12)', color: '#34d399', padding: '2px 8px', borderRadius: '999px' }}>{SCHEDULED.length}</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, background: 'rgba(52,211,153,0.12)', color: '#34d399', padding: '2px 8px', borderRadius: '999px' }}>{schedules.length}</span>
               </div>
-              {SCHEDULED.map((s, i) => (
-                <div key={i} style={{ padding: '14px 18px', borderBottom: i < SCHEDULED.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+              {schedules.length === 0 ? (
+                <div style={{ padding: '20px 18px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '0.8rem', color: 'rgba(167,243,208,0.35)', margin: 0 }}>No schedules yet</p>
+                  <button onClick={() => setShowModal(true)} style={{ marginTop: '10px', fontSize: '0.75rem', fontWeight: 600, color: '#34d399', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
+                    + Add one
+                  </button>
+                </div>
+              ) : schedules.map((s, i) => (
+                <div key={s.id} style={{ padding: '13px 18px', borderBottom: i < schedules.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                    <div>
-                      <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f0fdf4', margin: '0 0 3px' }}>{s.name}</p>
-                      <p style={{ fontSize: '0.72rem', color: 'rgba(167,243,208,0.5)', margin: '0 0 2px' }}>{s.cron} · {s.targets}</p>
-                      <p style={{ fontSize: '0.7rem', color: 'rgba(167,243,208,0.4)', margin: 0 }}>Next: {s.next}</p>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f0fdf4', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.domain}</p>
+                      <p style={{ fontSize: '0.72rem', color: 'rgba(167,243,208,0.5)', margin: '0 0 2px', textTransform: 'capitalize' }}>Repeats {s.frequency}</p>
+                      <p style={{ fontSize: '0.68rem', color: 'rgba(167,243,208,0.4)', margin: 0 }}>
+                        Next: {new Date(s.next_run).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </p>
                     </div>
-                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(167,243,208,0.4)', padding: '2px', flexShrink: 0 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg>
+                    <button onClick={() => deleteSchedule(s.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(239,68,68,0.5)', padding: '2px', flexShrink: 0 }}
+                      title="Delete schedule"
+                      onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                      onMouseLeave={e => (e.currentTarget.style.color = 'rgba(239,68,68,0.5)')}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     </button>
                   </div>
                 </div>
@@ -495,6 +568,42 @@ export default function ScansPage() {
                   </div>
                 </label>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Schedule Modal ─── */}
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowModal(false)}>
+          <div style={{ ...GLASS, borderRadius: '20px', padding: '28px', width: '380px', maxWidth: '90vw' }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f0fdf4', margin: '0 0 6px' }}>Schedule a scan</h2>
+            <p style={{ fontSize: '0.8rem', color: 'rgba(167,243,208,0.5)', margin: '0 0 22px' }}>Vyzor will automatically scan this domain on your chosen schedule.</p>
+
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'rgba(167,243,208,0.7)', marginBottom: '6px' }}>Domain</label>
+            <input
+              value={sched.domain}
+              onChange={e => setSched(p => ({ ...p, domain: e.target.value }))}
+              placeholder="example.com"
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', color: '#f0fdf4', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', marginBottom: '16px' }}
+            />
+
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'rgba(167,243,208,0.7)', marginBottom: '8px' }}>Frequency</label>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+              {(['daily', 'weekly', 'monthly'] as const).map(f => (
+                <button key={f} onClick={() => setSched(p => ({ ...p, frequency: f }))} style={{ flex: 1, padding: '8px 0', borderRadius: '9px', border: `1px solid ${sched.frequency === f ? '#34d399' : 'rgba(255,255,255,0.12)'}`, background: sched.frequency === f ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.04)', color: sched.frequency === f ? '#34d399' : 'rgba(167,243,208,0.6)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize' }}>
+                  {f}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setShowModal(false)} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(167,243,208,0.6)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={createSchedule} disabled={saving || !sched.domain} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: sched.domain && !saving ? '#34d399' : 'rgba(52,211,153,0.3)', color: '#021a12', fontSize: '0.875rem', fontWeight: 700, cursor: sched.domain && !saving ? 'pointer' : 'default', border: 'none' }}>
+                {saving ? 'Saving…' : 'Create schedule'}
+              </button>
             </div>
           </div>
         </div>

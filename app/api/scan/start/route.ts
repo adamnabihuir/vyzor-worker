@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+
+const PLAN_LIMITS: Record<string, number> = {
+  starter: 20,
+  growth:  50,
+};
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -9,6 +14,32 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // ── Plan quota check ──────────────────────────────────────────────────────
+    const clerk   = await clerkClient();
+    const user    = await clerk.users.getUser(userId);
+    const sub     = (user.publicMetadata?.subscription ?? {}) as { plan?: string };
+    const plan    = sub.plan ?? 'trial';
+    const limit   = PLAN_LIMITS[plan] ?? 3;
+
+    const supabase = getSupabaseAdmin();
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const { count } = await supabase
+      .from('scans')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', startOfMonth.toISOString());
+
+    if ((count ?? 0) >= limit) {
+      return NextResponse.json(
+        { error: `Scan limit reached (${count}/${limit} on ${plan} plan). Please upgrade your plan.`, limitReached: true },
+        { status: 429 }
+      );
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const body = await req.json().catch(() => ({}));
     const domain = typeof body.domain === 'string' ? body.domain.trim() : '';
 
@@ -26,7 +57,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid domain format' }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('scans')
       .insert({ domain: clean, user_id: userId })
