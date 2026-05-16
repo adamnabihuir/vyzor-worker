@@ -1,6 +1,6 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-import Sidebar from '@/components/dashboard/Sidebar';
+import DashboardShell from '@/components/dashboard/DashboardShell';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth();
@@ -16,10 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="min-h-screen flex" style={{ background: '#021a12' }}>
-      <Sidebar />
-      <main className="flex-1 ml-60 min-h-screen">
-        {children}
-      </main>
+      <DashboardShell>{children}</DashboardShell>
     </div>
   );
 }
