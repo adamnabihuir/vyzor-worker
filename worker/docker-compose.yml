@@ -1,0 +1,15 @@
+services:
+  worker:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    # nmap needs NET_RAW for SYN scans; remove if using TCP connect scan only
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    network_mode: host
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
