@@ -74,46 +74,46 @@ export default function Hero() {
               and prioritises what to fix first — before attackers find it.
             </p>
 
-            {/* Email capture */}
+            {/* Primary CTA */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4" style={{ maxWidth: '460px' }}>
+              <a href="/auth/register" className="btn-primary font-bold rounded-xl px-7 py-3.5 text-sm text-center whitespace-nowrap">
+                Start free trial →
+              </a>
+              <a href="#features"
+                className="font-semibold rounded-xl px-6 py-3.5 text-sm text-center transition-all"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'var(--text-sec)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}>
+                See how it works
+              </a>
+            </div>
+
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginBottom: '2rem' }}>
+              14-day free trial · No credit card required · Cancel anytime
+            </p>
+
+            {/* Waitlist */}
             {!submitted ? (
-              <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 mb-6" style={{ maxWidth: '460px' }}>
+              <form onSubmit={handleSubmit} className="flex gap-2 mb-6" style={{ maxWidth: '380px' }}>
                 <input
                   type="email"
-                  placeholder="Enter your work email"
+                  placeholder="Or join the waitlist"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="scan-input-dark flex-1 rounded-xl px-4 py-3.5 text-sm"
+                  className="scan-input-dark flex-1 rounded-xl px-4 py-2.5 text-sm"
                 />
-                <button type="submit" className="btn-primary font-semibold rounded-xl px-6 py-3.5 whitespace-nowrap text-sm">
-                  Start free trial →
+                <button type="submit" className="font-semibold rounded-xl px-4 py-2.5 text-sm whitespace-nowrap transition-all"
+                  style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.25)', color: '#34d399' }}>
+                  Notify me
                 </button>
               </form>
             ) : (
-              <div className="flex items-center gap-3 mb-6 px-5 py-4 rounded-xl"
-                style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.25)', maxWidth: '460px' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                <span style={{ color: '#34d399', fontWeight: 600, fontSize: '0.9rem' }}>You&apos;re in! We&apos;ll be in touch soon.</span>
+              <div className="flex items-center gap-3 mb-6 px-5 py-3 rounded-xl"
+                style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.25)', maxWidth: '380px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span style={{ color: '#34d399', fontWeight: 600, fontSize: '0.85rem' }}>You&apos;re on the list!</span>
               </div>
             )}
-
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
-              14-day free trial · No credit card · SOC 2 Type II
-            </p>
-
-            {/* Social proof */}
-            <div className="flex items-center gap-3 mt-8">
-              <div className="flex -space-x-2">
-                {['#6366f1', '#0ea5e9', '#a855f7', '#34d399'].map((c, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                    style={{ background: c, border: '2px solid #021a12' }}>
-                    {['A', 'J', 'M', 'S'][i]}
-                  </div>
-                ))}
-              </div>
-              <p style={{ color: 'var(--text-sec)', fontSize: '0.82rem' }}>
-                <span style={{ color: 'var(--text-pri)', fontWeight: 700 }}>500+</span> security teams trust Vyzor
-              </p>
-            </div>
           </div>
 
           {/* Right: terminal */}
