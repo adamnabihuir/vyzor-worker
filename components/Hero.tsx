@@ -161,16 +161,21 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Logo bar */}
+        {/* Trust bar */}
         <div className="mt-20 pt-10" style={{ borderTop: '1px solid rgba(52,211,153,0.08)' }}>
-          <p className="text-center text-xs font-semibold uppercase tracking-widest mb-8" style={{ color: 'var(--text-muted)' }}>
-            Trusted by security teams at
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-10">
-            {LOGOS.map((name) => (
-              <span key={name} className="text-sm font-bold tracking-wide" style={{ color: 'rgba(110,231,183,0.25)' }}>
-                {name}
-              </span>
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            {[
+              { icon: '⚡', text: 'Scan in under 60 seconds' },
+              { icon: '🔍', text: 'subfinder + nmap + nuclei' },
+              { icon: '🔒', text: 'No installation required' },
+              { icon: '🔔', text: 'Slack & email alerts' },
+              { icon: '📊', text: 'CVSS risk scoring' },
+            ].map((f) => (
+              <div key={f.text} className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(52,211,153,0.1)' }}>
+                <span className="text-sm">{f.icon}</span>
+                <span className="text-xs font-medium" style={{ color: 'rgba(167,243,208,0.5)' }}>{f.text}</span>
+              </div>
             ))}
           </div>
         </div>

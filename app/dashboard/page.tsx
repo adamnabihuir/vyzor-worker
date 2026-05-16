@@ -7,9 +7,9 @@ import { getRiskColor, getRiskLabel } from '@/lib/scans';
 import type { ScanRow } from '@/lib/supabase';
 
 const TRENDING_CVES = [
-  { id: 'CVE-2025-1234', score: 9.8, label: 'Critical', product: 'Apache Log4j', exploited: true },
-  { id: 'CVE-2025-0987', score: 8.6, label: 'High', product: 'OpenSSL 3.x', exploited: false },
-  { id: 'CVE-2024-9876', score: 7.5, label: 'High', product: 'nginx < 1.25', exploited: false },
+  { id: 'CVE-2024-3400', score: 10.0, label: 'Critical', product: 'Palo Alto PAN-OS GlobalProtect', exploited: true },
+  { id: 'CVE-2024-21762', score: 9.6, label: 'Critical', product: 'Fortinet FortiOS / FortiProxy', exploited: true },
+  { id: 'CVE-2024-6387', score: 8.1, label: 'High', product: 'OpenSSH RegreSSHion < 9.8', exploited: false },
 ];
 
 const SEVERITY_COLOR: Record<string, string> = {
@@ -423,7 +423,7 @@ export default function DashboardPage() {
           <div className="rounded-2xl p-6" style={GLASS}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-sm" style={{ color: '#f0fdf4' }}>Top Trending CVEs</h2>
-              <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444' }}>LIVE</span>
+              <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444' }}>CISA KEV</span>
             </div>
             <div className="space-y-3">
               {TRENDING_CVES.map((cve, i) => (

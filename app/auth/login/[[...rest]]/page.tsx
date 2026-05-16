@@ -21,26 +21,24 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10">
-          <blockquote className="text-xl font-semibold leading-relaxed mb-6" style={{ color: '#e2e8f0' }}>
-            &ldquo;Vyzor found 3 critical vulnerabilities in our infrastructure that our previous tool completely missed. ROI in week one.&rdquo;
-          </blockquote>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
-              style={{ background: 'linear-gradient(135deg, #34d399, #059669)', color: '#021a12' }}>
-              JM
-            </div>
-            <div>
-              <p className="font-semibold text-sm" style={{ color: '#f1f5f9' }}>James Mitchell</p>
-              <p className="text-xs" style={{ color: 'rgba(167,243,208,0.5)' }}>CISO, Nexora Finance</p>
-            </div>
-          </div>
+          <h2 className="text-2xl font-black mb-3" style={{ color: '#f0fdf4', lineHeight: 1.2 }}>
+            Your attack surface,<br />fully visible.
+          </h2>
+          <p style={{ color: 'rgba(167,243,208,0.65)', fontSize: '0.95rem', lineHeight: 1.7 }}>
+            Vyzor automatically discovers every exposed asset, scans for vulnerabilities, and tells you what to fix first — in under 60 seconds.
+          </p>
         </div>
 
-        <div className="relative z-10 flex items-center gap-6">
-          {[{ n: '12M+', l: 'Assets monitored' }, { n: '847K', l: 'Vulns found' }, { n: '99.97%', l: 'Uptime' }].map((s) => (
-            <div key={s.n}>
-              <p className="font-black text-lg gradient-text">{s.n}</p>
-              <p className="text-xs" style={{ color: 'rgba(167,243,208,0.4)' }}>{s.l}</p>
+        <div className="relative z-10 flex flex-col gap-3">
+          {[
+            { icon: '⚡', text: 'Results in under 60 seconds' },
+            { icon: '🔍', text: 'Subdomains, ports & CVEs detected automatically' },
+            { icon: '🔔', text: 'Instant Slack & email alerts on new findings' },
+            { icon: '🔒', text: '14-day free trial — no credit card required' },
+          ].map((f) => (
+            <div key={f.icon} className="flex items-center gap-3">
+              <span className="text-base">{f.icon}</span>
+              <span style={{ color: 'rgba(167,243,208,0.75)', fontSize: '0.875rem' }}>{f.text}</span>
             </div>
           ))}
         </div>
