@@ -1,10 +1,38 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getRiskColor, getRiskLabel } from '@/lib/scans';
 import type { ScanRow } from '@/lib/supabase';
+import WelcomeModal from '@/components/dashboard/WelcomeModal';
+
+const TARGET_CARDS = [
+  {
+    id: 'cloud',
+    icon: '☁️',
+    title: 'Cloud environments',
+    desc: 'AWS, GCP, Azure — discover exposed buckets, open ports, and misconfigurations.',
+  },
+  {
+    id: 'external',
+    icon: '🌐',
+    title: 'External infrastructure',
+    desc: 'Subdomains, IPs, and services exposed to the internet.',
+  },
+  {
+    id: 'webapp',
+    icon: '🖥️',
+    title: 'Web applications',
+    desc: 'Scan for OWASP Top 10, XSS, SQLi, broken auth, and more.',
+  },
+  {
+    id: 'containers',
+    icon: '📦',
+    title: 'Container images',
+    desc: 'Detect vulnerable packages and CVEs inside Docker images.',
+  },
+];
 
 const TRENDING_CVES = [
   { id: 'CVE-2024-3400', score: 10.0, label: 'Critical', product: 'Palo Alto PAN-OS GlobalProtect', exploited: true },
@@ -109,13 +137,18 @@ export default function DashboardPage() {
   useEffect(() => {
     fetch('/api/scans')
       .then(r => r.json())
-      .then(data => setRecentScans(data ?? []))
+      .then(data => setRecentScans(Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : [])))
       .catch(() => {})
       .finally(() => setLoadingScans(false));
 
     fetch('/api/risk-trend')
       .then(r => r.json())
       .then(data => Array.isArray(data) && setTrendPoints(data))
+      .catch(() => {});
+
+    fetch('/api/dashboard/summary')
+      .then(r => r.json())
+      .then(data => !data.error && setSummary(data))
       .catch(() => {});
   }, []);
 
@@ -137,11 +170,31 @@ export default function DashboardPage() {
     ? Math.round(completedScans.reduce((acc, s) => acc + (s.stats?.riskScore ?? 0), 0) / completedScans.length)
     : 0;
 
-  // Top issues to fix from real findings
-  const topIssues = completedScans
-    .flatMap(s => (s.findings ?? []).map(f => ({ ...f, domain: s.domain })))
-    .filter(f => f.severity === 'critical' || f.severity === 'high')
-    .slice(0, 5);
+  // Top issues — fetched from findings table when available
+  const [topIssues, setTopIssues] = useState<{ title: string; severity: string; asset: string }[]>([]);
+
+  useEffect(() => {
+    fetch('/api/vulnerabilities?status=open&severity=critical&limit=5')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setTopIssues(data.slice(0, 5).map((f: { title?: string; severity?: string; asset?: string; scanDomain?: string }) => ({
+            title:    f.title    ?? '',
+            severity: f.severity ?? 'high',
+            asset:    f.asset    ?? f.scanDomain ?? '',
+          })));
+        } else {
+          // fallback: top critical/high from JSONB scans
+          const fallback = completedScans
+            .flatMap(s => (s.findings ?? []).map(f => ({ ...f, domain: s.domain })))
+            .filter(f => f.severity === 'critical' || f.severity === 'high')
+            .slice(0, 5);
+          setTopIssues(fallback);
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingScans]);
 
   // Activity feed from real scans
   const activity = recentScans.slice(0, 5).map(s => ({
@@ -151,6 +204,14 @@ export default function DashboardPage() {
     time: timeAgo(s.created_at),
     color: s.status === 'completed' ? '#34d399' : s.status === 'failed' ? '#ef4444' : '#6366f1',
   }));
+
+  const [summary, setSummary] = useState<{
+    openFindings: number; criticalHigh: number;
+    bySeverity: { critical: number; high: number; medium: number; low: number };
+    totalAssets: number; subdomains: number; openPorts: number;
+    avgRisk: number; inProgress: number; totalScans: number; completedScans: number;
+    hasNormalizedData: boolean;
+  } | null>(null);
 
   const [notVerified, setNotVerified] = useState<string | null>(null);
 
@@ -187,32 +248,52 @@ export default function DashboardPage() {
   return (
     <div className="p-8">
 
-      {/* Onboarding banner for new users */}
+      {/* Welcome modal — shown once after signup via ?welcome=true */}
+      <Suspense fallback={null}>
+        <WelcomeModal />
+      </Suspense>
+
+      {/* Enhanced empty state for new users */}
       {isNewUser && (
-        <div className="mb-8 rounded-2xl p-6" style={{ background: 'linear-gradient(135deg, rgba(52,211,153,0.1) 0%, rgba(16,185,129,0.05) 100%)', border: '1px solid rgba(52,211,153,0.25)' }}>
-          <div className="flex items-start gap-4 mb-5">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.3)' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            </div>
-            <div>
-              <h2 className="font-black text-lg mb-1" style={{ color: '#f0fdf4' }}>Welcome to Vyzor — let&apos;s secure your first domain</h2>
-              <p style={{ color: 'rgba(167,243,208,0.65)', fontSize: '0.875rem' }}>Your trial is active. Run your first scan below to discover exposed assets and vulnerabilities.</p>
-            </div>
+        <div className="mb-10">
+          {/* Hero */}
+          <div className="mb-8">
+            <h1 className="font-black text-3xl text-white mb-2">Add and scan targets</h1>
+            <p style={{ color: 'rgba(167,243,208,0.6)', fontSize: '0.95rem' }}>
+              Select what you want to monitor. Vyzor will discover assets, map your attack surface, and surface vulnerabilities automatically.
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {[
-              { step: '1', title: 'Enter your domain', desc: 'Type example.com in the scan box below and click Scan now', icon: '🔍' },
-              { step: '2', title: 'Get your results', desc: 'Assets, open ports, and vulnerabilities found in under 60s', icon: '⚡' },
-              { step: '3', title: 'Connect Slack', desc: 'Go to Integrations to receive instant alerts on new findings', icon: '🔔' },
-            ].map(s => (
-              <div key={s.step} className="flex items-start gap-3 p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <span className="text-xl flex-shrink-0">{s.icon}</span>
-                <div>
-                  <p className="font-bold text-sm mb-0.5" style={{ color: '#f0fdf4' }}>{s.title}</p>
-                  <p className="text-xs" style={{ color: 'rgba(167,243,208,0.55)' }}>{s.desc}</p>
+          {/* Target type cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+            {TARGET_CARDS.map(card => (
+              <button
+                key={card.id}
+                onClick={() => router.push('/dashboard/targets')}
+                className="text-left rounded-2xl p-6 transition-all group"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(52,211,153,0.4)'; e.currentTarget.style.background = 'rgba(52,211,153,0.06)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+              >
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 text-2xl"
+                  style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.2)' }}>
+                  {card.icon}
                 </div>
-              </div>
+                <h3 className="font-bold text-sm text-white mb-1">{card.title}</h3>
+                <p className="text-xs" style={{ color: 'rgba(167,243,208,0.5)' }}>{card.desc}</p>
+                <div className="mt-4 flex items-center gap-1 text-xs font-semibold" style={{ color: '#34d399' }}>
+                  Add target <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </div>
+              </button>
             ))}
+          </div>
+          {/* Quick start strip */}
+          <div className="rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4"
+            style={{ background: 'linear-gradient(135deg, rgba(52,211,153,0.08) 0%, rgba(16,185,129,0.03) 100%)', border: '1px solid rgba(52,211,153,0.2)' }}>
+            <div className="flex-1">
+              <p className="font-bold text-sm text-white mb-0.5">Or scan a domain instantly</p>
+              <p className="text-xs" style={{ color: 'rgba(167,243,208,0.5)' }}>Enter any domain below and get a full report in under 60 seconds.</p>
+            </div>
+            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#34d399', flexShrink: 0 }} />
           </div>
         </div>
       )}
@@ -235,21 +316,32 @@ export default function DashboardPage() {
       </div>
 
       {/* Top stat strip */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        {[
-          { label: 'Total Scans', value: loadingScans ? '—' : String(recentScans.length), sub: `${completedScans.length} completed`, color: '#a78bfa' },
-          { label: 'Total Findings', value: loadingScans ? '—' : String(totalFindings), sub: hasRealData ? 'Across all scans' : 'No data yet', color: '#f59e0b' },
-          { label: 'Critical & High', value: loadingScans ? '—' : String(totalCriticalHigh), sub: 'Act immediately', color: '#ef4444' },
-          { label: 'In Progress', value: loadingScans ? '—' : String(inProgressScans.length), sub: inProgressScans.length > 0 ? 'Running now' : 'All idle', color: '#34d399' },
-          { label: 'Avg Risk Score', value: loadingScans ? '—' : String(avgRisk), sub: getRiskLabel(avgRisk) + ' risk', color: getRiskColor(avgRisk) },
-        ].map((s, i) => (
-          <div key={i} className="rounded-2xl px-5 py-4" style={GLASS}>
-            <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'rgba(167,243,208,0.5)' }}>{s.label}</p>
-            <p className="font-black text-2xl mb-0.5" style={{ color: s.color }}>{s.value}</p>
-            <p className="text-xs" style={{ color: 'rgba(167,243,208,0.4)' }}>{s.sub}</p>
+      {(() => {
+        const s = summary;
+        const loading = loadingScans && !s;
+        const openFindings   = s?.openFindings   ?? totalFindings;
+        const critHigh       = s?.criticalHigh   ?? totalCriticalHigh;
+        const assets         = s?.totalAssets    ?? 0;
+        const inProg         = s?.inProgress     ?? inProgressScans.length;
+        const riskScore      = s?.avgRisk        ?? avgRisk;
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            {[
+              { label: 'Total Scans',    value: loading ? '—' : String(recentScans.length), sub: `${completedScans.length} completed`,                           color: '#a78bfa' },
+              { label: 'Open Findings',  value: loading ? '—' : String(openFindings),       sub: s?.hasNormalizedData ? 'From findings table' : 'Across all scans', color: '#f59e0b' },
+              { label: 'Critical & High', value: loading ? '—' : String(critHigh),          sub: critHigh > 0 ? 'Act immediately' : 'None critical',               color: critHigh > 0 ? '#ef4444' : '#34d399' },
+              { label: 'Assets Found',   value: loading ? '—' : String(assets),             sub: assets > 0 ? `${s?.subdomains ?? 0} subdomains` : 'Run a scan',   color: '#34d399' },
+              { label: 'Avg Risk Score', value: loading ? '—' : String(riskScore),          sub: getRiskLabel(riskScore) + (inProg > 0 ? ` · ${inProg} running` : ' risk'), color: getRiskColor(riskScore) },
+            ].map((card, i) => (
+              <div key={i} className="rounded-2xl px-5 py-4" style={GLASS}>
+                <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'rgba(167,243,208,0.5)' }}>{card.label}</p>
+                <p className="font-black text-2xl mb-0.5" style={{ color: card.color }}>{card.value}</p>
+                <p className="text-xs" style={{ color: 'rgba(167,243,208,0.4)' }}>{card.sub}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        );
+      })()}
 
       {/* Risk trend chart */}
       {trendPoints.length >= 2 && (
@@ -304,35 +396,42 @@ export default function DashboardPage() {
             {/* Summary stats */}
             <div className="rounded-2xl p-6" style={GLASS}>
               <h2 className="font-bold text-sm mb-4" style={{ color: '#f0fdf4' }}>Severity Breakdown</h2>
-              {hasRealData ? (
-                <div className="space-y-3">
-                  {(['critical', 'high', 'medium', 'low'] as const).map(sev => {
-                    const count = completedScans.reduce((a, s) => a + (s.stats?.vulnerabilities?.[sev] ?? 0), 0);
-                    const max = Math.max(1, totalFindings);
-                    const pct = Math.round((count / max) * 100);
-                    const color = SEVERITY_COLOR[sev];
-                    return (
-                      <div key={sev}>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-bold uppercase" style={{ color }}>{sev}</span>
-                          <span style={{ color: 'rgba(167,243,208,0.6)' }}>{count}</span>
+              {(() => {
+                const bySev = summary?.bySeverity ?? (hasRealData ? {
+                  critical: completedScans.reduce((a, s) => a + (s.stats?.vulnerabilities?.critical ?? 0), 0),
+                  high:     completedScans.reduce((a, s) => a + (s.stats?.vulnerabilities?.high     ?? 0), 0),
+                  medium:   completedScans.reduce((a, s) => a + (s.stats?.vulnerabilities?.medium   ?? 0), 0),
+                  low:      completedScans.reduce((a, s) => a + (s.stats?.vulnerabilities?.low      ?? 0), 0),
+                } : null);
+                const total = bySev ? bySev.critical + bySev.high + bySev.medium + bySev.low : 0;
+                if (!bySev || total === 0) return (
+                  <div className="flex flex-col items-center justify-center py-8">
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center mb-3 font-black text-2xl"
+                      style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(167,243,208,0.3)' }}>?</div>
+                    <p className="text-xs text-center" style={{ color: 'rgba(167,243,208,0.5)' }}>Run your first scan to see the breakdown.</p>
+                  </div>
+                );
+                return (
+                  <div className="space-y-3">
+                    {(['critical', 'high', 'medium', 'low'] as const).map(sev => {
+                      const count = bySev[sev];
+                      const pct = Math.round((count / Math.max(1, total)) * 100);
+                      const color = SEVERITY_COLOR[sev];
+                      return (
+                        <div key={sev}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="font-bold uppercase" style={{ color }}>{sev}</span>
+                            <span style={{ color: 'rgba(167,243,208,0.6)' }}>{count}</span>
+                          </div>
+                          <div className="h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                            <div className="h-2 rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+                          </div>
                         </div>
-                        <div className="h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                          <div className="h-2 rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mb-3 font-black text-2xl"
-                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(167,243,208,0.3)' }}>?</div>
-                  <p className="text-xs text-center" style={{ color: 'rgba(167,243,208,0.5)' }}>
-                    Run your first scan to see the breakdown.
-                  </p>
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
