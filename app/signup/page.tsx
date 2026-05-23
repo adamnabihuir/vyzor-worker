@@ -1,11 +1,107 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSignUp } from '@clerk/nextjs/legacy';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
+
+/* ── Inline code verification component ────────────────────── */
+function VerifyCodeInline({
+  signUp,
+  onBack,
+}: {
+  signUp: NonNullable<ReturnType<typeof useSignUp>['signUp']>;
+  onBack: () => void;
+}) {
+  const router   = useRouter();
+  const [digits, setDigits] = useState(['', '', '', '', '', '']);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const { setActive } = useSignUp();
+
+  const handleChange = (i: number, val: string) => {
+    if (!/^\d?$/.test(val)) return;
+    const next = [...digits];
+    next[i] = val;
+    setDigits(next);
+    setError('');
+    if (val && i < 5) inputRefs.current[i + 1]?.focus();
+    if (next.every(d => d !== '') && next.join('').length === 6) {
+      verify(next.join(''));
+    }
+  };
+
+  const handleKeyDown = (i: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !digits[i] && i > 0) {
+      inputRefs.current[i - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (text.length === 6) {
+      setDigits(text.split(''));
+      verify(text);
+    }
+  };
+
+  const verify = async (code: string) => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await signUp.attemptEmailAddressVerification({ code });
+      if (result.status === 'complete' && result.createdSessionId) {
+        await setActive!({ session: result.createdSessionId });
+        router.replace('/dashboard');
+      } else {
+        // More steps needed — go set password
+        router.replace('/auth/set-password');
+      }
+    } catch (err: unknown) {
+      const clerkErr = err as { errors?: { message: string; longMessage?: string }[] };
+      const msg =
+        clerkErr?.errors?.[0]?.longMessage ??
+        clerkErr?.errors?.[0]?.message ??
+        'Code invalide.';
+      setError(msg);
+      setDigits(['', '', '', '', '', '']);
+      setLoading(false);
+      inputRefs.current[0]?.focus();
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex gap-2 justify-center mb-3" onPaste={handlePaste}>
+        {digits.map((d, i) => (
+          <input
+            key={i}
+            ref={el => { inputRefs.current[i] = el; }}
+            type="text"
+            inputMode="numeric"
+            maxLength={1}
+            value={d}
+            onChange={e => handleChange(i, e.target.value)}
+            onKeyDown={e => handleKeyDown(i, e)}
+            className="w-11 h-12 text-center text-white text-xl font-bold bg-slate-800/60 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all"
+          />
+        ))}
+      </div>
+      {loading && (
+        <div className="flex justify-center mb-2">
+          <Loader2 size={20} className="animate-spin text-emerald-400" />
+        </div>
+      )}
+      {error && (
+        <p className="text-center text-sm text-red-400 mb-2">⚠ {error}</p>
+      )}
+    </div>
+  );
+}
 
 type Status = 'idle' | 'loading' | 'sent';
 type OAuthProvider = 'oauth_google' | 'oauth_microsoft';
@@ -92,10 +188,9 @@ export default function SignupPage() {
         },
       });
 
-      // 3. Send magic link — password will be set after verification
+      // 3. Send 6-digit verification code by email
       await signUp.prepareEmailAddressVerification({
-        strategy: 'email_link',
-        redirectUrl: `${window.location.origin}/auth/verify-email`,
+        strategy: 'email_code',
       });
 
       setStatus('sent');
@@ -138,31 +233,18 @@ export default function SignupPage() {
         </div>
 
         <h1 className="text-2xl font-black text-white mb-2">Vérifiez votre email</h1>
-        <p className="text-slate-400 text-sm mb-1">Un lien de vérification a été envoyé à</p>
-        <p className="font-bold text-emerald-400 mb-8">{email}</p>
+        <p className="text-slate-400 text-sm mb-1">Un code à 6 chiffres a été envoyé à</p>
+        <p className="font-bold text-emerald-400 mb-6">{email}</p>
 
-        <div
-          className="rounded-xl p-5 text-left mb-6 space-y-3"
-          style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)' }}
-        >
-          {[
-            { num: '1', text: 'Ouvrez l\'email Vyzor dans votre boîte de réception' },
-            { num: '2', text: 'Cliquez sur « Vérifier mon email »' },
-            { num: '3', text: 'Vous serez redirigé pour créer votre mot de passe' },
-          ].map(s => (
-            <div key={s.num} className="flex items-start gap-3">
-              <span
-                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5"
-                style={{ background: 'rgba(52,211,153,0.2)', color: '#34d399' }}
-              >
-                {s.num}
-              </span>
-              <span className="text-sm text-slate-300">{s.text}</span>
-            </div>
-          ))}
-        </div>
+        <p className="text-slate-400 text-sm mb-2">Entrez le code reçu :</p>
+        {signUp && (
+          <VerifyCodeInline
+            signUp={signUp}
+            onBack={() => { setStatus('idle'); setError(''); }}
+          />
+        )}
 
-        <p className="text-xs text-slate-600 mb-4">
+        <p className="mt-4 text-xs text-slate-600">
           Pas d&apos;email ? Vérifiez vos spams ou{' '}
           <button
             onClick={() => { setStatus('idle'); setError(''); }}
@@ -173,9 +255,11 @@ export default function SignupPage() {
           .
         </p>
 
-        <Link href="/auth/login" className="text-xs text-slate-600 hover:text-slate-400">
-          Déjà un compte ? Se connecter →
-        </Link>
+        <div className="mt-4">
+          <Link href="/auth/login" className="text-xs text-slate-600 hover:text-slate-400">
+            Déjà un compte ? Se connecter →
+          </Link>
+        </div>
       </div>
     );
   }
