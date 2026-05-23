@@ -25,7 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user.passwordEnabled) redirect('/auth/force-password');
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#f8fafc' }}>
+    <div className="min-h-screen flex" style={{ background: '#0a0a0a' }}>
       <DashboardShell>{children}</DashboardShell>
     </div>
   );

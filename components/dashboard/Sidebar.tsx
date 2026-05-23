@@ -101,9 +101,9 @@ function NavLink({
   const style: React.CSSProperties = {
     padding: collapsed ? '8px 0' : '8px 12px',
     justifyContent: collapsed ? 'center' : 'flex-start',
-    background: active ? '#ecfdf5' : 'transparent',
-    color: locked ? '#94a3b8' : active ? '#059669' : '#475569',
-    opacity: locked ? 0.7 : 1,
+    background: active ? '#00ff4112' : 'transparent',
+    color: locked ? '#333' : active ? '#00ff41' : '#4d4d4d',
+    opacity: locked ? 0.5 : 1,
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -122,14 +122,14 @@ function NavLink({
       style={style}
       onMouseEnter={e => {
         if (!active && !locked) {
-          e.currentTarget.style.background = '#f1f5f9';
-          e.currentTarget.style.color = '#1e293b';
+          e.currentTarget.style.background = '#00ff410a';
+          e.currentTarget.style.color = '#00cc33';
         }
       }}
       onMouseLeave={e => {
         if (!active && !locked) {
           e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = '#475569';
+          e.currentTarget.style.color = '#4d4d4d';
         }
       }}
     >
@@ -155,9 +155,9 @@ function Divider({ collapsed }: { collapsed: boolean }) {
   return (
     <div className="py-2 px-2">
       {!collapsed ? (
-        <div style={{ height: 1, background: '#e2e8f0' }} />
+        <div style={{ height: 1, background: '#00ff4115' }} />
       ) : (
-        <div style={{ height: 1, background: '#e2e8f0', margin: '0 8px' }} />
+        <div style={{ height: 1, background: '#00ff4115', margin: '0 8px' }} />
       )}
     </div>
   );
@@ -193,14 +193,14 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
       className="fixed left-0 top-0 h-full flex flex-col z-40 transition-all duration-300"
       style={{
         width: collapsed ? '64px' : '240px',
-        background: '#ffffff',
-        borderRight: '1px solid #e2e8f0',
+        background: '#0d0d0d',
+        borderRight: '1px solid #00ff4120',
         overflow: 'hidden',
       }}
     >
       {/* Logo + toggle */}
       <div className="flex items-center justify-between px-3 py-4"
-        style={{ borderBottom: '1px solid #e2e8f0', minHeight: 56 }}>
+        style={{ borderBottom: '1px solid #00ff4115', minHeight: 56 }}>
         {!collapsed && (
           <div className="transition-opacity duration-200">
             <Logo size={24} />
@@ -212,14 +212,14 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
           className="flex items-center justify-center rounded-lg transition-all flex-shrink-0"
           style={{
             width: 28, height: 28,
-            background: '#f1f5f9',
-            color: '#64748b',
-            border: '1px solid #e2e8f0',
+            background: '#00ff4112',
+            color: '#00ff41',
+            border: '1px solid #00ff4130',
             marginLeft: collapsed ? 'auto' : 0,
             marginRight: collapsed ? 'auto' : 0,
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = '#f1f5f9'; }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#00ff4125'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#00ff4112'; }}
         >
           {collapsed ? (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
@@ -264,7 +264,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                     }}
                   />
                 </div>
-                <span className="text-xs whitespace-nowrap" style={{ color: '#94a3b8' }}>
+                <span className="text-xs whitespace-nowrap" style={{ color: '#2d2d2d' }}>
                   {limit === Infinity ? `${used} scans` : `${used}/${limit}`}
                 </span>
               </div>
@@ -306,7 +306,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
       </nav>
 
       {/* Bottom nav */}
-      <div className="px-2 py-3 space-y-0.5" style={{ borderTop: '1px solid #e2e8f0' }}>
+      <div className="px-2 py-3 space-y-0.5" style={{ borderTop: '1px solid #00ff4115' }}>
         {BOTTOM_NAV.map(item => {
           const active = isActive(item.href);
           const isBilling = item.href === '/dashboard/billing';
@@ -320,25 +320,25 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
                 padding: collapsed ? '8px 0' : '8px 12px',
                 justifyContent: collapsed ? 'center' : 'flex-start',
                 background: active
-                  ? '#ecfdf5'
+                  ? '#00ff4112'
                   : isBilling && plan !== 'pro'
-                  ? 'rgba(239,68,68,0.06)'
+                  ? 'rgba(239,68,68,0.08)'
                   : 'transparent',
-                color: active ? '#059669' : isBilling && plan !== 'pro' ? '#ef4444' : '#475569',
+                color: active ? '#00ff41' : isBilling && plan !== 'pro' ? '#ff4444' : '#4d4d4d',
                 border: isBilling && plan !== 'pro' && !active ? '1px solid rgba(239,68,68,0.2)' : '1px solid transparent',
               }}
               onMouseEnter={e => {
                 if (!active) {
-                  e.currentTarget.style.background = '#f1f5f9';
-                  e.currentTarget.style.color = '#1e293b';
+                  e.currentTarget.style.background = '#00ff410a';
+                  e.currentTarget.style.color = '#00cc33';
                 }
               }}
               onMouseLeave={e => {
                 if (!active) {
                   e.currentTarget.style.background =
-                    isBilling && plan !== 'pro' ? 'rgba(239,68,68,0.06)' : 'transparent';
+                    isBilling && plan !== 'pro' ? 'rgba(239,68,68,0.08)' : 'transparent';
                   e.currentTarget.style.color =
-                    isBilling && plan !== 'pro' ? '#ef4444' : '#475569';
+                    isBilling && plan !== 'pro' ? '#ff4444' : '#4d4d4d';
                 }
               }}
             >
@@ -362,25 +362,25 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
           style={{
             padding: collapsed ? '8px 0' : '8px 12px',
             justifyContent: collapsed ? 'center' : 'flex-start',
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
+            background: '#00ff410a',
+            border: '1px solid #00ff4120',
           }}>
           <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg,#34d399,#059669)', color: '#ffffff' }}>
+            style={{ background: 'linear-gradient(135deg,#00ff41,#00cc33)', color: '#0a0a0a' }}>
             {initials}
           </div>
           {!collapsed && (
             <>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold truncate" style={{ color: '#1e293b' }}>{displayName}</p>
-                <p className="text-xs truncate" style={{ color: '#94a3b8' }}>{displayEmail}</p>
+                <p className="text-xs font-semibold truncate" style={{ color: '#00ff41' }}>{displayName}</p>
+                <p className="text-xs truncate" style={{ color: '#2d2d2d' }}>{displayEmail}</p>
               </div>
               <button
                 onClick={() => signOut({ redirectUrl: '/sign-in' })}
-                style={{ color: '#94a3b8' }}
+                style={{ color: '#2d2d2d' }}
                 title="Sign out"
-                onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
+                onMouseEnter={e => e.currentTarget.style.color = '#ff4444'}
+                onMouseLeave={e => e.currentTarget.style.color = '#2d2d2d'}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
