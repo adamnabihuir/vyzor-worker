@@ -1,6 +1,7 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import DashboardShell from '@/components/dashboard/DashboardShell';
+import { validateEmail } from '@/lib/auth/email-validation';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth();
@@ -8,11 +9,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const client = await clerkClient();
   const user = await client.users.getUser(userId);
-  const sub = user.publicMetadata?.subscription as { status?: string } | undefined;
-  const activeStatuses = ['trialing', 'active'];
-  const hasAccess = sub?.status && activeStatuses.includes(sub.status);
 
-  if (!hasAccess) redirect('/onboarding');
+  // Block non-corporate emails
+  const primaryEmailObj = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId);
+  const primaryEmail    = primaryEmailObj?.emailAddress ?? '';
+  const emailCheck      = validateEmail(primaryEmail);
+  if (!emailCheck.valid) redirect('/signup?error=corporate_required');
+
+  // Block accounts whose email is NOT verified (protects against create-instant bypass)
+  const emailVerified = primaryEmailObj?.verification?.status === 'verified';
+  if (!emailVerified) redirect('/signup?error=email_not_verified');
+
+  // Block accounts that have no password — ensures only our signup flow was used.
+  // Users who signed in via email link/code (bypassing password) are caught here.
+  if (!user.passwordEnabled) redirect('/auth/force-password');
 
   return (
     <div className="min-h-screen flex" style={{ background: '#021a12' }}>
