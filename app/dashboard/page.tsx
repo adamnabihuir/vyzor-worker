@@ -34,11 +34,6 @@ const TARGET_CARDS = [
   },
 ];
 
-const TRENDING_CVES = [
-  { id: 'CVE-2024-3400', score: 10.0, label: 'Critical', product: 'Palo Alto PAN-OS GlobalProtect', exploited: true },
-  { id: 'CVE-2024-21762', score: 9.6, label: 'Critical', product: 'Fortinet FortiOS / FortiProxy', exploited: true },
-  { id: 'CVE-2024-6387', score: 8.1, label: 'High', product: 'OpenSSH RegreSSHion < 9.8', exploited: false },
-];
 
 const SEVERITY_COLOR: Record<string, string> = {
   critical: '#ef4444', high: '#f59e0b', medium: '#6366f1', low: '#22c55e',
@@ -540,28 +535,6 @@ export default function DashboardPage() {
 
         {/* RIGHT COLUMN */}
         <div className="space-y-5">
-          {/* Trending CVEs */}
-          <div className="rounded-2xl p-6" style={GLASS}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-sm" style={{ color: '#f0fdf4' }}>Top Trending CVEs</h2>
-              <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444' }}>CISA KEV</span>
-            </div>
-            <div className="space-y-3">
-              {TRENDING_CVES.map((cve, i) => (
-                <div key={i} className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-mono font-semibold" style={{ color: '#f0fdf4' }}>{cve.id}</span>
-                    <div className="flex items-center gap-1.5">
-                      {cve.exploited && <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>EXPLOIT</span>}
-                      <span className="font-bold text-sm" style={{ color: SEVERITY_COLOR[cve.label.toLowerCase()] }}>{cve.score}</span>
-                    </div>
-                  </div>
-                  <p className="text-xs" style={{ color: 'rgba(167,243,208,0.5)' }}>{cve.product}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Issues to fix */}
           <div className="rounded-2xl p-6" style={GLASS}>
             <div className="flex items-center justify-between mb-4">
