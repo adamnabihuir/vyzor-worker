@@ -262,55 +262,152 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* New Scan — top of page */}
-      <div className="rounded-2xl p-5 mb-6" style={GLASS}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="font-bold text-base" style={{ color: '#f0fdf4', margin: 0 }}>New Scan</h2>
-            <p className="text-xs mt-0.5" style={{ color: 'rgba(167,243,208,0.4)' }}>Powered by subfinder · nmap · nuclei</p>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full" style={{ background: inProgressScans.length > 0 ? '#00ff41' : 'rgba(167,243,208,0.2)', animation: inProgressScans.length > 0 ? 'pulse 2s infinite' : 'none' }} />
-            <span className="text-xs font-semibold" style={{ color: 'rgba(167,243,208,0.5)' }}>
-              {inProgressScans.length} scan{inProgressScans.length !== 1 ? 's' : ''} in progress
-            </span>
-          </div>
-        </div>
-        <form onSubmit={handleScan} className="flex gap-3">
-          <div className="relative flex-1">
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'rgba(167,243,208,0.35)' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      {/* ── New Scan hero bar ── */}
+      <div className="mb-6 rounded-2xl overflow-hidden" style={{
+        background: 'linear-gradient(135deg, #0d1f14 0%, #0a1a10 60%, #060f09 100%)',
+        border: '1px solid rgba(0,255,65,0.12)',
+        boxShadow: '0 0 60px rgba(0,255,65,0.04), 0 8px 32px rgba(0,0,0,0.4)',
+        position: 'relative',
+      }}>
+        {/* Subtle grid background */}
+        <div style={{
+          position: 'absolute', inset: 0, opacity: 0.04,
+          backgroundImage: 'linear-gradient(rgba(0,255,65,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,65,0.6) 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
+          pointerEvents: 'none',
+        }} />
+        {/* Glow top-left */}
+        <div style={{
+          position: 'absolute', top: -40, left: -40, width: 200, height: 200,
+          background: 'radial-gradient(circle, rgba(0,255,65,0.08) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+
+        <div style={{ position: 'relative', padding: '28px 32px' }}>
+          {/* Top row */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 10,
+                  background: 'rgba(0,255,65,0.1)', border: '1px solid rgba(0,255,65,0.25)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00ff41" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                  </svg>
+                </div>
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#f0fdf4', margin: 0, letterSpacing: '-0.01em' }}>
+                  Scan a target
+                </h2>
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'rgba(167,243,208,0.4)', margin: 0 }}>
+                Subfinder &nbsp;·&nbsp; Nmap &nbsp;·&nbsp; Nuclei &nbsp;·&nbsp; Full CVE detection in ~60s
+              </p>
             </div>
-            <input type="text" placeholder="example.com" value={domain} onChange={e => setDomain(e.target.value)} className="scan-input w-full rounded-xl pl-10 pr-4 py-3 text-sm" />
-          </div>
-          <button type="submit" disabled={scanning}
-            className="font-bold rounded-xl px-7 py-3 text-sm whitespace-nowrap"
-            style={{ background: scanning ? 'rgba(0,255,65,0.4)' : '#00ff41', color: '#020d04' }}>
-            {scanning
-              ? <span className="flex items-center gap-2"><svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Queuing…</span>
-              : 'Scan now'}
-          </button>
-        </form>
-        {notVerified && (
-          <div className="mt-3 px-4 py-3 rounded-xl flex items-center justify-between gap-3" style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)' }}>
-            <div className="flex items-center gap-3">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span className="text-sm font-semibold" style={{ color: '#fbbf24' }}>
-                <span className="font-mono">{notVerified}</span> not verified — prove ownership first.
+            {/* Live indicator */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 12px', borderRadius: 999,
+              background: inProgressScans.length > 0 ? 'rgba(0,255,65,0.08)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${inProgressScans.length > 0 ? 'rgba(0,255,65,0.25)' : 'rgba(255,255,255,0.07)'}`,
+            }}>
+              <div style={{
+                width: 7, height: 7, borderRadius: '50%',
+                background: inProgressScans.length > 0 ? '#00ff41' : 'rgba(167,243,208,0.25)',
+                boxShadow: inProgressScans.length > 0 ? '0 0 8px rgba(0,255,65,0.6)' : 'none',
+                animation: inProgressScans.length > 0 ? 'pulse 2s infinite' : 'none',
+              }} />
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: inProgressScans.length > 0 ? '#00ff41' : 'rgba(167,243,208,0.4)' }}>
+                {inProgressScans.length > 0 ? `${inProgressScans.length} running` : 'Ready'}
               </span>
             </div>
-            <Link href="/dashboard/domains/add" className="text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap flex-shrink-0"
-              style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
-              Verify domain →
-            </Link>
           </div>
-        )}
-        {scanError && (
-          <div className="mt-3 px-4 py-3 rounded-xl flex items-center gap-3" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <span className="text-sm font-semibold" style={{ color: '#ef4444' }}>{scanError}</span>
-          </div>
-        )}
+
+          {/* Input row */}
+          <form onSubmit={handleScan} style={{ display: 'flex', gap: 10 }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              {/* Terminal prefix */}
+              <span style={{
+                position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+                fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 700,
+                color: 'rgba(0,255,65,0.5)', pointerEvents: 'none', userSelect: 'none',
+              }}>$</span>
+              <input
+                type="text"
+                placeholder="target.com"
+                value={domain}
+                onChange={e => setDomain(e.target.value)}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: '14px 16px 14px 32px',
+                  borderRadius: 12,
+                  background: 'rgba(0,0,0,0.4)',
+                  border: '1px solid rgba(0,255,65,0.15)',
+                  color: '#f0fdf4', fontSize: '0.95rem', fontFamily: 'monospace',
+                  outline: 'none', transition: 'border-color 0.15s',
+                  letterSpacing: '0.02em',
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = 'rgba(0,255,65,0.45)'}
+                onBlur={e => e.currentTarget.style.borderColor = 'rgba(0,255,65,0.15)'}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={scanning}
+              style={{
+                padding: '14px 28px', borderRadius: 12, border: 'none',
+                background: scanning ? 'rgba(0,255,65,0.3)' : '#00ff41',
+                color: '#020d04', fontSize: '0.9rem', fontWeight: 800,
+                cursor: scanning ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
+                boxShadow: scanning ? 'none' : '0 0 24px rgba(0,255,65,0.25)',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { if (!scanning) { e.currentTarget.style.background = '#39ff6e'; e.currentTarget.style.boxShadow = '0 0 36px rgba(0,255,65,0.4)'; } }}
+              onMouseLeave={e => { if (!scanning) { e.currentTarget.style.background = '#00ff41'; e.currentTarget.style.boxShadow = '0 0 24px rgba(0,255,65,0.25)'; } }}
+            >
+              {scanning ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 0.8s linear infinite' }}>
+                    <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"/>
+                  </svg>
+                  Queuing…
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  Scan now
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Alerts */}
+          {notVerified && (
+            <div style={{ marginTop: 12, padding: '10px 16px', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#fbbf24', fontFamily: 'monospace' }}>{notVerified}</span>
+                <span style={{ fontSize: '0.78rem', color: 'rgba(251,191,36,0.7)' }}>not verified — prove ownership first</span>
+              </div>
+              <Link href="/dashboard/domains/add" style={{ fontSize: '0.72rem', fontWeight: 700, padding: '5px 12px', borderRadius: 8,
+                background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                Verify →
+              </Link>
+            </div>
+          )}
+          {scanError && (
+            <div style={{ marginTop: 12, padding: '10px 16px', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 9,
+              background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ef4444' }}>{scanError}</span>
+            </div>
+          )}
+        </div>
+
+        <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
       </div>
 
       {/* Top stat strip */}
