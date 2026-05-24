@@ -135,6 +135,7 @@ export default function SignupPage() {
   const [company, setCompany]     = useState('');
   const [status, setStatus]       = useState<Status>('idle');
   const [error, setError]         = useState('');
+  const [agreed, setAgreed]       = useState(false);
   const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
 
   // Already signed in → go to dashboard
@@ -376,6 +377,37 @@ export default function SignupPage() {
           </div>
         </div>
 
+        {/* Terms checkbox */}
+        <label className="flex items-start gap-3 cursor-pointer select-none">
+          <div className="relative flex-shrink-0 mt-0.5">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={e => setAgreed(e.target.checked)}
+              className="sr-only"
+            />
+            <div
+              className="w-4 h-4 rounded border flex items-center justify-center transition-all"
+              style={{
+                background: agreed ? '#10b981' : 'rgba(255,255,255,0.05)',
+                borderColor: agreed ? '#10b981' : 'rgba(255,255,255,0.2)',
+              }}
+            >
+              {agreed && (
+                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                  <path d="M1 4l2.5 2.5L9 1" stroke="#021a12" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </div>
+          </div>
+          <span className="text-xs text-slate-400 leading-relaxed">
+            By creating an account, you agree to our{' '}
+            <Link href="/privacy" className="text-slate-300 underline hover:text-white">Privacy Policy</Link>
+            {' '}and{' '}
+            <Link href="/terms" className="text-slate-300 underline hover:text-white">Terms and Conditions</Link>
+          </span>
+        </label>
+
         {/* Error */}
         {error && (
           <div
@@ -389,10 +421,10 @@ export default function SignupPage() {
         {/* Submit — no password, sends verification link */}
         <button
           type="submit"
-          disabled={status === 'loading'}
-          className="w-full py-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          disabled={status === 'loading' || !agreed}
+          className="w-full py-3 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            background: status === 'loading' ? 'rgba(52,211,153,0.4)' : '#10b981',
+            background: status === 'loading' || !agreed ? 'rgba(52,211,153,0.4)' : '#10b981',
             color: '#021a12',
           }}
         >
@@ -406,12 +438,6 @@ export default function SignupPage() {
         <Link href="/auth/login" className="text-emerald-400 hover:text-emerald-300 font-semibold">
           Sign in
         </Link>
-      </p>
-      <p className="mt-2 text-center text-xs text-slate-700">
-        By signing up you agree to our{' '}
-        <Link href="/terms" className="underline">Terms of Service</Link>
-        {' '}and{' '}
-        <Link href="/privacy" className="underline">Privacy Policy</Link>.
       </p>
 
       {/* Required by Clerk for bot protection */}
