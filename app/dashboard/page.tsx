@@ -302,7 +302,7 @@ export default function DashboardPage() {
                 </h2>
               </div>
               <p style={{ fontSize: '0.78rem', color: 'rgba(167,243,208,0.4)', margin: 0 }}>
-                Subfinder &nbsp;·&nbsp; Nmap &nbsp;·&nbsp; Nuclei &nbsp;·&nbsp; Full CVE detection in ~60s
+                Enter a domain or IP to discover vulnerabilities automatically
               </p>
             </div>
             {/* Live indicator */}
