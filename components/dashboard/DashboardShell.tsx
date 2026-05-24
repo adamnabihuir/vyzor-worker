@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
+import TrialGate from './TrialGate';
+import { PlanProvider } from '@/components/providers/PlanProvider';
 
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -23,7 +25,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const sidebarWidth = collapsed ? 64 : 240;
 
   return (
-    <>
+    <PlanProvider>
+      <TrialGate />
       <Sidebar collapsed={collapsed} onToggle={toggle} />
       <main
         className="flex-1 min-h-screen"
@@ -34,6 +37,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       >
         {children}
       </main>
-    </>
+    </PlanProvider>
   );
 }

@@ -9,8 +9,9 @@ export default function ActivateTrialPage() {
 
   const handleActivate = () => {
     setLoading(true);
-    // Brief pulse then redirect to dashboard with welcome modal
     setTimeout(() => {
+      // Mark trial as activated so TrialGate won't show
+      localStorage.setItem('vyzor_trial_active', '1');
       router.replace('/dashboard?welcome=true');
     }, 900);
   };
