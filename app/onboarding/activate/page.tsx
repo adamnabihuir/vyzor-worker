@@ -1,19 +1,31 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function ActivateTrialPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
 
-  const handleActivate = () => {
+  const handleActivate = async () => {
     setLoading(true);
-    setTimeout(() => {
-      // Mark trial as activated so TrialGate won't show
-      localStorage.setItem('vyzor_trial_active', '1');
-      router.replace('/dashboard?welcome=true');
-    }, 900);
+    setError('');
+    try {
+      const res  = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: 'growth' }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        setError(data.error ?? 'Could not start checkout.');
+        setLoading(false);
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      setError('Network error — please try again.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -104,8 +116,15 @@ export default function ActivateTrialPage() {
         fontSize: '0.85rem', color: 'rgba(167,243,208,0.5)',
         margin: '0 0 36px', textAlign: 'center', maxWidth: 340, lineHeight: 1.6,
       }}>
-        You get full Growth-tier access, free for 14 days. No credit card required.
+        Your card won&apos;t be charged until the trial ends — cancel anytime.
       </p>
+
+      {/* Error */}
+      {error && (
+        <p style={{ fontSize: '0.78rem', color: '#f87171', marginBottom: 16, background: 'rgba(239,68,68,0.08)', padding: '10px 16px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.2)', textAlign: 'center' }}>
+          ⚠ {error}
+        </p>
+      )}
 
       {/* Activate button */}
       <button
@@ -128,14 +147,14 @@ export default function ActivateTrialPage() {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 0.8s linear infinite' }}>
               <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round"/>
             </svg>
-            Activating…
+            Redirecting to checkout…
           </>
         ) : (
           <>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polygon points="5 3 19 12 5 21 5 3"/>
+              <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
             </svg>
-            Activate trial
+            Start free trial
           </>
         )}
       </button>
