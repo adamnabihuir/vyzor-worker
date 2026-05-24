@@ -7,33 +7,6 @@ import { getRiskColor, getRiskLabel } from '@/lib/scans';
 import type { ScanRow } from '@/lib/supabase';
 import WelcomeModal from '@/components/dashboard/WelcomeModal';
 
-const TARGET_CARDS = [
-  {
-    id: 'cloud',
-    icon: '☁️',
-    title: 'Cloud environments',
-    desc: 'AWS, GCP, Azure — discover exposed buckets, open ports, and misconfigurations.',
-  },
-  {
-    id: 'external',
-    icon: '🌐',
-    title: 'External infrastructure',
-    desc: 'Subdomains, IPs, and services exposed to the internet.',
-  },
-  {
-    id: 'webapp',
-    icon: '🖥️',
-    title: 'Web applications',
-    desc: 'Scan for OWASP Top 10, XSS, SQLi, broken auth, and more.',
-  },
-  {
-    id: 'containers',
-    icon: '📦',
-    title: 'Container images',
-    desc: 'Detect vulnerable packages and CVEs inside Docker images.',
-  },
-];
-
 
 const SEVERITY_COLOR: Record<string, string> = {
   critical: '#ef4444', high: '#f59e0b', medium: '#6366f1', low: '#22c55e',
@@ -238,7 +211,6 @@ export default function DashboardPage() {
   };
 
   const hasRealData = completedScans.length > 0;
-  const isNewUser = !loadingScans && recentScans.length === 0;
 
   return (
     <div className="p-8">
@@ -248,50 +220,6 @@ export default function DashboardPage() {
         <WelcomeModal />
       </Suspense>
 
-      {/* Enhanced empty state for new users */}
-      {isNewUser && (
-        <div className="mb-10">
-          {/* Hero */}
-          <div className="mb-8">
-            <h1 className="font-black text-3xl text-white mb-2">Add and scan targets</h1>
-            <p style={{ color: 'rgba(167,243,208,0.6)', fontSize: '0.95rem' }}>
-              Select what you want to monitor. Vyzor will discover assets, map your attack surface, and surface vulnerabilities automatically.
-            </p>
-          </div>
-          {/* Target type cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-            {TARGET_CARDS.map(card => (
-              <button
-                key={card.id}
-                onClick={() => router.push('/dashboard/targets')}
-                className="text-left rounded-2xl p-6 transition-all group"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(52,211,153,0.4)'; e.currentTarget.style.background = 'rgba(52,211,153,0.06)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-              >
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 text-2xl"
-                  style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.2)' }}>
-                  {card.icon}
-                </div>
-                <h3 className="font-bold text-sm text-white mb-1">{card.title}</h3>
-                <p className="text-xs" style={{ color: 'rgba(167,243,208,0.5)' }}>{card.desc}</p>
-                <div className="mt-4 flex items-center gap-1 text-xs font-semibold" style={{ color: '#34d399' }}>
-                  Add target <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </div>
-              </button>
-            ))}
-          </div>
-          {/* Quick start strip */}
-          <div className="rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4"
-            style={{ background: 'linear-gradient(135deg, rgba(52,211,153,0.08) 0%, rgba(16,185,129,0.03) 100%)', border: '1px solid rgba(52,211,153,0.2)' }}>
-            <div className="flex-1">
-              <p className="font-bold text-sm text-white mb-0.5">Or scan a domain instantly</p>
-              <p className="text-xs" style={{ color: 'rgba(167,243,208,0.5)' }}>Enter any domain below and get a full report in under 60 seconds.</p>
-            </div>
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#34d399', flexShrink: 0 }} />
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
