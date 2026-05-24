@@ -13,52 +13,76 @@ const SEVERITY_COLOR: Record<string, string> = {
 };
 
 function RiskTrendChart({ points }: { points: { domain: string; date: string; riskScore: number }[] }) {
-  if (points.length < 2) return null;
+  const W = 600, H = 110, PAD_X = 8, PAD_Y = 14;
+  const isEmpty = points.length === 0;
 
-  const W = 600, H = 90, PAD = 12;
-  const scores = points.map(p => p.riskScore);
-  const minS = 0, maxS = 100;
-  const toX = (i: number) => PAD + (i / (points.length - 1)) * (W - PAD * 2);
-  const toY = (s: number) => PAD + (1 - (s - minS) / (maxS - minS)) * (H - PAD * 2);
+  // When empty: 7 flat zero-points across last 7 days
+  const displayPoints = isEmpty
+    ? Array.from({ length: 7 }, (_, i) => ({
+        domain: '',
+        date: new Date(Date.now() - (6 - i) * 86400000).toISOString(),
+        riskScore: 0,
+      }))
+    : points.length === 1
+    ? [{ ...points[0], riskScore: 0 }, points[0]]
+    : points;
 
-  const polyline = points.map((p, i) => `${toX(i)},${toY(p.riskScore)}`).join(' ');
-  const area = `M${toX(0)},${toY(points[0].riskScore)} ` +
-    points.slice(1).map((p, i) => `L${toX(i + 1)},${toY(p.riskScore)}`).join(' ') +
-    ` L${toX(points.length - 1)},${H} L${toX(0)},${H} Z`;
+  const toX = (i: number) => PAD_X + (i / (displayPoints.length - 1)) * (W - PAD_X * 2);
+  const toY = (s: number) => PAD_Y + (1 - s / 100) * (H - PAD_Y * 2);
 
-  const last = points[points.length - 1];
-  const lineColor = last.riskScore >= 75 ? '#ef4444' : last.riskScore >= 50 ? '#f59e0b' : last.riskScore >= 25 ? '#6366f1' : '#34d399';
-  const areaColor = last.riskScore >= 75 ? 'rgba(239,68,68,0.08)' : last.riskScore >= 50 ? 'rgba(245,158,11,0.08)' : 'rgba(52,211,153,0.08)';
+  const lineColor = isEmpty ? 'rgba(0,255,65,0.25)' :
+    displayPoints[displayPoints.length - 1].riskScore >= 75 ? '#ef4444' :
+    displayPoints[displayPoints.length - 1].riskScore >= 50 ? '#f59e0b' :
+    displayPoints[displayPoints.length - 1].riskScore >= 25 ? '#6366f1' : '#00ff41';
+
+  const polylinePts = displayPoints.map((p, i) => `${toX(i)},${toY(p.riskScore)}`).join(' ');
+  const areaPath = `M${toX(0)},${toY(displayPoints[0].riskScore)} ` +
+    displayPoints.slice(1).map((p, i) => `L${toX(i + 1)},${toY(p.riskScore)}`).join(' ') +
+    ` L${toX(displayPoints.length - 1)},${H - PAD_Y} L${toX(0)},${H - PAD_Y} Z`;
 
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block' }}>
-      <defs>
-        <linearGradient id="trend-area" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={lineColor} stopOpacity="0.15" />
-          <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {/* Y grid lines */}
-      {[25, 50, 75].map(v => (
-        <line key={v} x1={PAD} y1={toY(v)} x2={W - PAD} y2={toY(v)}
-          stroke="rgba(255,255,255,0.06)" strokeWidth="1" strokeDasharray="3 3" />
-      ))}
-      {/* Area fill */}
-      <path d={area} fill="url(#trend-area)" />
-      {/* Line */}
-      <polyline points={polyline} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-      {/* Dots */}
-      {points.map((p, i) => (
-        <circle key={i} cx={toX(i)} cy={toY(p.riskScore)} r="3" fill={lineColor} stroke="rgba(2,26,18,0.8)" strokeWidth="1.5">
-          <title>{p.domain} — {p.riskScore}/100 ({new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })})</title>
-        </circle>
-      ))}
-      {/* Last value label */}
-      <text x={toX(points.length - 1)} y={toY(last.riskScore) - 7}
-        textAnchor="middle" fontSize="10" fontWeight="700" fill={lineColor}>
-        {last.riskScore}
-      </text>
-    </svg>
+    <div style={{ position: 'relative' }}>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: 'block' }}>
+        <defs>
+          <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={lineColor} stopOpacity={isEmpty ? '0.06' : '0.18'} />
+            <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* Grid lines */}
+        {[0, 25, 50, 75, 100].map(v => (
+          <line key={v} x1={PAD_X} y1={toY(v)} x2={W - PAD_X} y2={toY(v)}
+            stroke="rgba(255,255,255,0.05)" strokeWidth="1"
+            strokeDasharray={v === 0 ? 'none' : '3 4'} />
+        ))}
+        {/* Area */}
+        <path d={areaPath} fill="url(#chart-grad)" />
+        {/* Line */}
+        <polyline points={polylinePts} fill="none"
+          stroke={lineColor} strokeWidth="2"
+          strokeDasharray={isEmpty ? '6 4' : 'none'}
+          strokeLinejoin="round" strokeLinecap="round" />
+        {/* Dots — only when real data */}
+        {!isEmpty && displayPoints.map((p, i) => (
+          <circle key={i} cx={toX(i)} cy={toY(p.riskScore)} r="3.5"
+            fill={lineColor} stroke="#0a0a0a" strokeWidth="2">
+            <title>{p.domain} — {p.riskScore}/100 ({new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })})</title>
+          </circle>
+        ))}
+      </svg>
+      {/* Empty overlay label */}
+      {isEmpty && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+          pointerEvents: 'none',
+        }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'rgba(0,255,65,0.3)' }}>
+            No scans yet — run your first scan to see the trend
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -266,40 +290,59 @@ export default function DashboardPage() {
         );
       })()}
 
-      {/* Risk trend chart */}
-      {trendPoints.length >= 2 && (
-        <div className="rounded-2xl p-5 mb-6" style={GLASS}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <div>
-              <h2 className="font-bold text-sm" style={{ color: '#f0fdf4', margin: 0 }}>Risk Score Trend</h2>
-              <p style={{ color: 'rgba(167,243,208,0.45)', fontSize: '0.75rem', marginTop: '2px' }}>
-                {trendPoints.length} completed scans · hover dots for details
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '14px' }}>
-              {[
+      {/* Risk trend chart — always visible */}
+      <div className="rounded-2xl p-5 mb-6" style={GLASS}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div>
+            <h2 className="font-bold text-sm" style={{ color: '#f0fdf4', margin: 0 }}>Risk Score Trend</h2>
+            <p style={{ color: 'rgba(167,243,208,0.35)', fontSize: '0.72rem', marginTop: '2px' }}>
+              {trendPoints.length > 0
+                ? `${trendPoints.length} scan${trendPoints.length > 1 ? 's' : ''} · hover dots for details`
+                : 'Risk score over time'}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '18px' }}>
+            {trendPoints.length > 0 ? (
+              [
                 { label: 'Latest', value: trendPoints[trendPoints.length - 1].riskScore },
                 { label: 'Peak',   value: Math.max(...trendPoints.map(p => p.riskScore)) },
                 { label: 'Best',   value: Math.min(...trendPoints.map(p => p.riskScore)) },
               ].map(s => (
                 <div key={s.label} style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: '0.65rem', color: 'rgba(167,243,208,0.4)', margin: 0 }}>{s.label}</p>
+                  <p style={{ fontSize: '0.62rem', color: 'rgba(167,243,208,0.35)', margin: 0 }}>{s.label}</p>
                   <p style={{ fontSize: '1rem', fontWeight: 900, color: getRiskColor(s.value), margin: 0 }}>{s.value}</p>
                 </div>
-              ))}
-            </div>
-          </div>
-          <RiskTrendChart points={trendPoints} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-            <span style={{ fontSize: '0.65rem', color: 'rgba(167,243,208,0.3)' }}>
-              {new Date(trendPoints[0].date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-            </span>
-            <span style={{ fontSize: '0.65rem', color: 'rgba(167,243,208,0.3)' }}>
-              {new Date(trendPoints[trendPoints.length - 1].date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-            </span>
+              ))
+            ) : (
+              ['Latest', 'Peak', 'Best'].map(label => (
+                <div key={label} style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: '0.62rem', color: 'rgba(167,243,208,0.25)', margin: 0 }}>{label}</p>
+                  <p style={{ fontSize: '1rem', fontWeight: 900, color: 'rgba(0,255,65,0.2)', margin: 0 }}>0</p>
+                </div>
+              ))
+            )}
           </div>
         </div>
-      )}
+        <RiskTrendChart points={trendPoints} />
+        {/* X-axis labels */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+          {trendPoints.length >= 2 ? (
+            <>
+              <span style={{ fontSize: '0.62rem', color: 'rgba(167,243,208,0.25)' }}>
+                {new Date(trendPoints[0].date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              </span>
+              <span style={{ fontSize: '0.62rem', color: 'rgba(167,243,208,0.25)' }}>
+                {new Date(trendPoints[trendPoints.length - 1].date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              </span>
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: '0.62rem', color: 'rgba(167,243,208,0.18)' }}>7 days ago</span>
+              <span style={{ fontSize: '0.62rem', color: 'rgba(167,243,208,0.18)' }}>Today</span>
+            </>
+          )}
+        </div>
+      </div>
 
       <div className="grid xl:grid-cols-3 gap-6">
         {/* LEFT COLUMN */}
