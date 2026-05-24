@@ -56,7 +56,7 @@ function VerifyCodeInline({
       const result = await signUp.attemptEmailAddressVerification({ code });
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive!({ session: result.createdSessionId });
-        router.replace('/dashboard');
+        router.replace('/dashboard?welcome=true');
       } else {
         // More steps needed — go set password
         router.replace('/auth/set-password');

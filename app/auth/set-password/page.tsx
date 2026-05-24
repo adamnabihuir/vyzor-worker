@@ -33,7 +33,7 @@ export default function SetPasswordPage() {
     if (!signUp) { router.replace('/signup'); return; }
     // If somehow already complete, go to dashboard
     if (signUp.status === 'complete' && signUp.createdSessionId) {
-      setActive({ session: signUp.createdSessionId }).then(() => router.replace('/dashboard'));
+      setActive({ session: signUp.createdSessionId }).then(() => router.replace('/dashboard?welcome=true'));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
@@ -64,7 +64,7 @@ export default function SetPasswordPage() {
 
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
-        router.replace('/dashboard');
+        router.replace('/dashboard?welcome=true');
       } else {
         // Still missing something — should not happen in normal flow
         setError('Une étape supplémentaire est requise. Veuillez réessayer.');
