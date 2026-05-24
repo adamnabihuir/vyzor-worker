@@ -262,6 +262,57 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* New Scan — top of page */}
+      <div className="rounded-2xl p-5 mb-6" style={GLASS}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-bold text-base" style={{ color: '#f0fdf4', margin: 0 }}>New Scan</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'rgba(167,243,208,0.4)' }}>Powered by subfinder · nmap · nuclei</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full" style={{ background: inProgressScans.length > 0 ? '#00ff41' : 'rgba(167,243,208,0.2)', animation: inProgressScans.length > 0 ? 'pulse 2s infinite' : 'none' }} />
+            <span className="text-xs font-semibold" style={{ color: 'rgba(167,243,208,0.5)' }}>
+              {inProgressScans.length} scan{inProgressScans.length !== 1 ? 's' : ''} in progress
+            </span>
+          </div>
+        </div>
+        <form onSubmit={handleScan} className="flex gap-3">
+          <div className="relative flex-1">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'rgba(167,243,208,0.35)' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </div>
+            <input type="text" placeholder="example.com" value={domain} onChange={e => setDomain(e.target.value)} className="scan-input w-full rounded-xl pl-10 pr-4 py-3 text-sm" />
+          </div>
+          <button type="submit" disabled={scanning}
+            className="font-bold rounded-xl px-7 py-3 text-sm whitespace-nowrap"
+            style={{ background: scanning ? 'rgba(0,255,65,0.4)' : '#00ff41', color: '#020d04' }}>
+            {scanning
+              ? <span className="flex items-center gap-2"><svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Queuing…</span>
+              : 'Scan now'}
+          </button>
+        </form>
+        {notVerified && (
+          <div className="mt-3 px-4 py-3 rounded-xl flex items-center justify-between gap-3" style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)' }}>
+            <div className="flex items-center gap-3">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span className="text-sm font-semibold" style={{ color: '#fbbf24' }}>
+                <span className="font-mono">{notVerified}</span> not verified — prove ownership first.
+              </span>
+            </div>
+            <Link href="/dashboard/domains/add" className="text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap flex-shrink-0"
+              style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
+              Verify domain →
+            </Link>
+          </div>
+        )}
+        {scanError && (
+          <div className="mt-3 px-4 py-3 rounded-xl flex items-center gap-3" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span className="text-sm font-semibold" style={{ color: '#ef4444' }}>{scanError}</span>
+          </div>
+        )}
+      </div>
+
       {/* Top stat strip */}
       {(() => {
         const s = summary;
@@ -399,56 +450,6 @@ export default function DashboardPage() {
                 );
               })()}
             </div>
-          </div>
-
-          {/* New scan */}
-          <div className="rounded-2xl p-6" style={GLASS}>
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="font-bold text-base" style={{ color: '#f0fdf4' }}>New Scan</h2>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ background: inProgressScans.length > 0 ? '#34d399' : 'rgba(167,243,208,0.3)', animation: inProgressScans.length > 0 ? 'pulse 2s infinite' : 'none' }} />
-                <span className="text-xs font-semibold" style={{ color: '#34d399' }}>
-                  {inProgressScans.length} scan{inProgressScans.length !== 1 ? 's' : ''} in progress
-                </span>
-              </div>
-            </div>
-            <p className="text-sm mb-5" style={{ color: 'rgba(167,243,208,0.5)' }}>Powered by subfinder · nmap · nuclei</p>
-            <form onSubmit={handleScan} className="flex gap-3">
-              <div className="relative flex-1">
-                <div className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'rgba(167,243,208,0.4)' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                </div>
-                <input type="text" placeholder="example.com" value={domain} onChange={e => setDomain(e.target.value)} className="scan-input w-full rounded-xl pl-10 pr-4 py-3 text-sm" />
-              </div>
-              <button type="submit" disabled={scanning}
-                className="font-bold rounded-xl px-6 py-3 text-sm whitespace-nowrap"
-                style={{ background: '#34d399', color: '#021a12' }}>
-                {scanning
-                  ? <span className="flex items-center gap-2"><svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Queuing…</span>
-                  : 'Scan now'}
-              </button>
-            </form>
-            {notVerified && (
-              <div className="mt-4 px-4 py-3 rounded-xl flex items-center justify-between gap-3" style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)' }}>
-                <div className="flex items-center gap-3">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  <span className="text-sm font-semibold" style={{ color: '#fbbf24' }}>
-                    <span className="font-mono">{notVerified}</span> is not verified — you must prove ownership first.
-                  </span>
-                </div>
-                <Link href={`/dashboard/domains/add`}
-                  className="text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap flex-shrink-0"
-                  style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
-                  Verify domain →
-                </Link>
-              </div>
-            )}
-            {scanError && (
-              <div className="mt-4 px-4 py-3 rounded-xl flex items-center gap-3" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <span className="text-sm font-semibold" style={{ color: '#ef4444' }}>{scanError}</span>
-              </div>
-            )}
           </div>
 
           {/* Recent scans */}
